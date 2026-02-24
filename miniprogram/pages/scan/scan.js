@@ -12,7 +12,7 @@ Page({
       U: false, D: false, F: false, B: false, L: false, R: false
     },
     cubeColors: {},  // 存储各面颜色
-    lastDetectedFace: null,
+    currentDetectingFace: null,  // 当前正在检测的面
     faceStableCount: 0
   },
 
@@ -25,6 +25,10 @@ Page({
     L: '左面（绿色）',
     R: '右面（蓝色）'
   },
+
+  // 实例变量（不需要渲染到页面）
+  lastDetectedFace: null,
+  frameCount: 0,
 
   onLoad() {
     this.checkCameraAuth()
@@ -57,6 +61,11 @@ Page({
       this.goToSolve()
       return
     }
+
+    // 重置检测状态
+    this.lastDetectedFace = null
+    this.faceStableCount = 0
+    this.frameCount = 0
 
     this.setData({ 
       isScanning: true,
@@ -91,6 +100,11 @@ Page({
   processFrame(frame) {
     if (!this.data.isScanning) return
 
+    this.frameCount++
+    
+    // 每5帧处理一次，降低CPU压力
+    if (this.frameCount % 5 !== 0) return
+
     try {
       // 从帧数据中提取颜色
       const faceColors = this.extractColorsFromFrame(frame)
@@ -99,18 +113,30 @@ Page({
         // 检测这是哪个面（根据中心块颜色）
         const detectedFace = this.detectFaceByCenter(faceColors)
         
-        // 稳定性检测：同一个面连续检测3次才确认
-        if (detectedFace === this.data.lastDetectedFace) {
+        console.log(`帧 ${this.frameCount}: 检测到面 ${detectedFace}`)
+        
+        // 如果这个面已经扫描过，跳过
+        if (this.data.scanned[detectedFace]) {
+          return
+        }
+        
+        // 稳定性检测：同一个面连续检测5次才确认
+        if (detectedFace === this.lastDetectedFace) {
           this.faceStableCount++
           
-          if (this.faceStableCount >= 3 && !this.data.scanned[detectedFace]) {
+          if (this.faceStableCount >= 5) {
             // 确认新的一面
             this.confirmFace(detectedFace, faceColors)
           }
         } else {
           // 检测到不同的面，重置计数
-          this.setData({ lastDetectedFace: detectedFace })
+          this.lastDetectedFace = detectedFace
           this.faceStableCount = 1
+          
+          // 更新提示
+          this.setData({
+            hintText: `正在识别: ${this.faceNames[detectedFace] || detectedFace}，请保持稳定`
+          })
         }
       }
     } catch (err) {
@@ -138,7 +164,7 @@ Page({
         const sampleY = Math.floor(centerY - scanSize / 2 + row * cellSize + cellSize / 2)
         
         // 取周围区域的平均颜色
-        const avgColor = this.getAverageColor(data, width, height, sampleX, sampleY, 5)
+        const avgColor = this.getAverageColor(data, width, height, sampleX, sampleY, 8)
         
         // 识别颜色
         const colorName = colorDetector.detectColor(avgColor)
@@ -200,8 +226,14 @@ Page({
       hintText: newCount < 6 ? '继续转动，展示其他面' : '扫描完成！'
     })
 
+    // 重置检测状态，准备识别下一个面
+    this.lastDetectedFace = null
+    this.faceStableCount = 0
+
     // 震动反馈
     wx.vibrateShort({ type: 'medium' })
+    
+    console.log(`确认面 ${face}:`, colors)
     
     if (newCount >= 6) {
       this.stopScanning()
@@ -226,6 +258,9 @@ Page({
   // 重置扫描
   resetScan() {
     this.stopScanning()
+    this.lastDetectedFace = null
+    this.faceStableCount = 0
+    this.frameCount = 0
     this.setData({
       statusText: '准备扫描',
       hintText: '将魔方对准框内，缓慢转动',
@@ -234,9 +269,7 @@ Page({
       scanned: {
         U: false, D: false, F: false, B: false, L: false, R: false
       },
-      cubeColors: {},
-      lastDetectedFace: null,
-      faceStableCount: 0
+      cubeColors: {}
     })
   },
 
