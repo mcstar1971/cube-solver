@@ -1,13 +1,11 @@
 <!-- pages/solve/solve.wxml -->
 <view class="container">
-  <!-- 3D魔方展示 -->
+  <!-- 魔方展示区域 -->
   <view class="cube-container">
     <canvas 
-      type="webgl" 
-      canvas-id="cubeCanvas" 
-      class="cube-canvas"
-      bindtouchstart="onTouchStart"
-      bindtouchmove="onTouchMove">
+      type="2d" 
+      id="cubeCanvas" 
+      class="cube-canvas">
     </canvas>
   </view>
 
@@ -20,7 +18,7 @@
     </view>
   </view>
 
-  <!-- 文本提示 -->
+  <!-- 文字提示 -->
   <view class="text-guide">
     <text class="guide-text">{{guideText}}</text>
   </view>
@@ -28,10 +26,10 @@
   <!-- 控制按钮 -->
   <view class="control-area">
     <button class="btn-prev" bindtap="prevStep" disabled="{{currentStep <= 1}}">
-      上一步
+      ← 上一步
     </button>
     <button class="btn-next" bindtap="nextStep">
-      {{currentStep >= totalSteps ? '完成' : '下一步'}}
+      {{currentStep >= totalSteps ? '完成 ✓' : '下一步 →'}}
     </button>
   </view>
 
