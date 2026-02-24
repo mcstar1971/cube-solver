@@ -16,14 +16,14 @@ Page({
     faceStableCount: 0
   },
 
-  // 面名称映射
+  // 面名称映射（中文颜色名）
   faceNames: {
-    U: '顶面（白色）',
-    D: '底面（黄色）',
-    F: '前面（红色）',
-    B: '后面（橙色）',
-    L: '左面（绿色）',
-    R: '右面（蓝色）'
+    U: '白色面',
+    D: '黄色面',
+    F: '红色面',
+    B: '橙色面',
+    L: '绿色面',
+    R: '蓝色面'
   },
 
   // 实例变量（不需要渲染到页面）
@@ -135,7 +135,7 @@ Page({
           
           // 更新提示
           this.setData({
-            hintText: `正在识别: ${this.faceNames[detectedFace] || detectedFace}，请保持稳定`
+            hintText: `检测到${this.faceNames[detectedFace] || detectedFace}，请保持稳定`
           })
         }
       }
@@ -280,6 +280,36 @@ Page({
       title: '摄像头错误',
       icon: 'none'
     })
+  },
+
+  // 手动标记面（调试/备用）
+  toggleFace(e) {
+    const face = e.currentTarget.dataset.face
+    const scanned = { ...this.data.scanned }
+    
+    if (scanned[face]) {
+      // 取消标记
+      scanned[face] = false
+      this.setData({ 
+        scanned,
+        scannedCount: this.data.scannedCount - 1
+      })
+    } else {
+      // 标记为已扫描
+      scanned[face] = true
+      const newCount = this.data.scannedCount + 1
+      this.setData({ 
+        scanned,
+        scannedCount: newCount
+      })
+      
+      if (newCount >= 6) {
+        this.setData({
+          statusText: '扫描完成',
+          hintText: '点击继续开始还原'
+        })
+      }
+    }
   },
 
   // 进入还原页面

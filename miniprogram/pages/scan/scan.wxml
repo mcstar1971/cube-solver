@@ -27,17 +27,29 @@
     <text class="hint-text">{{hintText}}</text>
   </view>
 
-  <!-- 进度指示 -->
+  <!-- 进度指示 - 用颜色表示 -->
   <view class="progress-area">
     <view class="cube-faces">
-      <view class="face {{scanned.U ? 'scanned' : ''}}">U</view>
-      <view class="face {{scanned.D ? 'scanned' : ''}}">D</view>
-      <view class="face {{scanned.F ? 'scanned' : ''}}">F</view>
-      <view class="face {{scanned.B ? 'scanned' : ''}}">B</view>
-      <view class="face {{scanned.L ? 'scanned' : ''}}">L</view>
-      <view class="face {{scanned.R ? 'scanned' : ''}}">R</view>
+      <view class="face face-white {{scanned.U ? 'scanned' : ''}}" bindtap="toggleFace" data-face="U">
+        <text class="face-label">白</text>
+      </view>
+      <view class="face face-yellow {{scanned.D ? 'scanned' : ''}}" bindtap="toggleFace" data-face="D">
+        <text class="face-label">黄</text>
+      </view>
+      <view class="face face-red {{scanned.F ? 'scanned' : ''}}" bindtap="toggleFace" data-face="F">
+        <text class="face-label">红</text>
+      </view>
+      <view class="face face-orange {{scanned.B ? 'scanned' : ''}}" bindtap="toggleFace" data-face="B">
+        <text class="face-label">橙</text>
+      </view>
+      <view class="face face-green {{scanned.L ? 'scanned' : ''}}" bindtap="toggleFace" data-face="L">
+        <text class="face-label">绿</text>
+      </view>
+      <view class="face face-blue {{scanned.R ? 'scanned' : ''}}" bindtap="toggleFace" data-face="R">
+        <text class="face-label">蓝</text>
+      </view>
     </view>
-    <text class="progress-text">已扫描 {{scannedCount}}/6 面</text>
+    <text class="progress-text">已扫描 {{scannedCount}}/6 面（点击可手动标记）</text>
   </view>
 
   <!-- 操作按钮 -->
