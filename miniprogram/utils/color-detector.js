@@ -1,117 +1,127 @@
 /**
  * utils/color-detector.js - 魔方颜色识别工具
+ * 使用 HSV 色彩空间提高识别准确率
  */
 
-// 魔方标准颜色定义
-const CUBE_COLORS = {
-  WHITE:  { name: 'U', hex: '#FFFFFF', rgb: [255, 255, 255] },
-  YELLOW: { name: 'D', hex: '#FFFF00', rgb: [255, 255, 0] },
-  RED:    { name: 'F', hex: '#FF0000', rgb: [255, 0, 0] },
-  ORANGE: { name: 'B', hex: '#FFA500', rgb: [255, 165, 0] },
-  BLUE:   { name: 'R', hex: '#0000FF', rgb: [0, 0, 255] },
-  GREEN:  { name: 'L', hex: '#00FF00', rgb: [0, 255, 0] }
+// 魔方标准颜色定义 (HSV范围)
+// H: 色相 0-360, S: 饱和度 0-100, V: 明度 0-100
+const COLOR_RANGES = [
+  { name: 'U', label: '白色', hMin: 0, hMax: 360, sMin: 0, sMax: 30, vMin: 70 },      // 白色：低饱和度，高明度
+  { name: 'D', label: '黄色', hMin: 40, hMax: 70, sMin: 40, sMax: 100, vMin: 50 },   // 黄色
+  { name: 'F', label: '红色', hMin: 0, hMax: 20, sMin: 50, sMax: 100, vMin: 30 },    // 红色 (包含 340-360)
+  { name: 'B', label: '橙色', hMin: 20, hMax: 45, sMin: 50, sMax: 100, vMin: 50 },   // 橙色
+  { name: 'L', label: '绿色', hMin: 80, hMax: 160, sMin: 40, sMax: 100, vMin: 30 },  // 绿色
+  { name: 'R', label: '蓝色', hMin: 200, hMax: 260, sMin: 40, sMax: 100, vMin: 30 }  // 蓝色
+]
+
+/**
+ * RGB 转 HSV
+ */
+function rgbToHsv(r, g, b) {
+  r /= 255
+  g /= 255
+  b /= 255
+  
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const diff = max - min
+  
+  let h = 0
+  const s = max === 0 ? 0 : (diff / max) * 100
+  const v = max * 100
+  
+  if (diff !== 0) {
+    if (max === r) {
+      h = 60 * ((g - b) / diff + (g < b ? 6 : 0))
+    } else if (max === g) {
+      h = 60 * ((b - r) / diff + 2)
+    } else {
+      h = 60 * ((r - g) / diff + 4)
+    }
+  }
+  
+  return { h, s, v }
 }
 
 /**
- * 计算两个颜色的相似度（欧几里得距离）
- */
-function colorDistance(rgb1, rgb2) {
-  return Math.sqrt(
-    Math.pow(rgb1[0] - rgb2[0], 2) +
-    Math.pow(rgb1[1] - rgb2[1], 2) +
-    Math.pow(rgb1[2] - rgb2[2], 2)
-  )
-}
-
-/**
- * 识别单个色块颜色
- * @param {number[]} rgb - RGB颜色值 [r, g, b]
- * @returns {string} 魔方颜色名称 (U/D/F/B/L/R)
+ * 识别单个色块颜色（HSV方法）
  */
 function detectColor(rgb) {
-  let minDistance = Infinity
-  let detectedColor = 'U'
-
-  for (const [colorName, colorData] of Object.entries(CUBE_COLORS)) {
-    const distance = colorDistance(rgb, colorData.rgb)
-    if (distance < minDistance) {
-      minDistance = distance
-      detectedColor = colorData.name
-    }
+  const hsv = rgbToHsv(rgb[0], rgb[1], rgb[2])
+  
+  // 如果明度太低，无法识别
+  if (hsv.v < 20) {
+    console.log('颜色太暗:', rgb, hsv)
+    return null
   }
-
-  return detectedColor
-}
-
-/**
- * 从图像帧中提取魔方面颜色
- * @param {ImageData} frameData - 图像数据
- * @param {number} faceSize - 魔方面在画面中的大小
- * @returns {string[][]} 3x3的颜色矩阵
- */
-function extractFaceColors(frameData, faceSize) {
-  const colors = []
-  const cellSize = faceSize / 3
-  const centerX = frameData.width / 2
-  const centerY = frameData.height / 2
-  const startX = centerX - faceSize / 2
-  const startY = centerY - faceSize / 2
-
-  for (let row = 0; row < 3; row++) {
-    colors[row] = []
-    for (let col = 0; col < 3; col++) {
-      // 取每个格子中心点的颜色
-      const sampleX = Math.floor(startX + col * cellSize + cellSize / 2)
-      const sampleY = Math.floor(startY + row * cellSize + cellSize / 2)
-      
-      // 取周围区域的平均值以减少噪声
-      const avgColor = getAverageColor(frameData, sampleX, sampleY, 10)
-      colors[row][col] = detectColor(avgColor)
-    }
+  
+  // 白色：低饱和度且高明度
+  if (hsv.s < 30 && hsv.v > 60) {
+    return 'U'
   }
-
-  return colors
-}
-
-/**
- * 获取区域平均颜色
- */
-function getAverageColor(frameData, centerX, centerY, radius) {
-  let r = 0, g = 0, b = 0, count = 0
-
-  for (let dy = -radius; dy <= radius; dy++) {
-    for (let dx = -radius; dx <= radius; dx++) {
-      const x = centerX + dx
-      const y = centerY + dy
-      
-      if (x >= 0 && x < frameData.width && y >= 0 && y < frameData.height) {
-        const idx = (y * frameData.width + x) * 4
-        r += frameData.data[idx]
-        g += frameData.data[idx + 1]
-        b += frameData.data[idx + 2]
-        count++
+  
+  // 其他颜色按色相匹配
+  for (const color of COLOR_RANGES) {
+    if (color.name === 'U') continue  // 白色已经处理
+    
+    // 红色特殊处理（跨0度）
+    if (color.name === 'F') {
+      if ((hsv.h >= 340 || hsv.h <= 20) && hsv.s >= color.sMin) {
+        return 'F'
       }
+      continue
+    }
+    
+    if (hsv.h >= color.hMin && hsv.h <= color.hMax && hsv.s >= color.sMin) {
+      return color.name
     }
   }
+  
+  // 如果都没匹配，按距离找最接近的
+  return findClosestColor(rgb)
+}
 
-  return [
-    Math.round(r / count),
-    Math.round(g / count),
-    Math.round(b / count)
-  ]
+/**
+ * 备用：RGB距离匹配
+ */
+function findClosestColor(rgb) {
+  const COLORS = {
+    U: [255, 255, 255],
+    D: [255, 255, 0],
+    F: [255, 0, 0],
+    B: [255, 165, 0],
+    L: [0, 255, 0],
+    R: [0, 0, 255]
+  }
+  
+  let minDist = Infinity
+  let result = 'U'
+  
+  for (const [name, color] of Object.entries(COLORS)) {
+    const dist = Math.sqrt(
+      Math.pow(rgb[0] - color[0], 2) +
+      Math.pow(rgb[1] - color[1], 2) +
+      Math.pow(rgb[2] - color[2], 2)
+    )
+    if (dist < minDist) {
+      minDist = dist
+      result = name
+    }
+  }
+  
+  return result
 }
 
 /**
  * 验证魔方状态是否有效
  */
 function validateCubeState(state) {
-  // 检查是否所有面都有数据
   const faces = ['U', 'D', 'F', 'B', 'L', 'R']
+  
   for (const face of faces) {
     if (!state[face]) return false
   }
   
-  // 检查每个颜色是否恰好出现9次
   const colorCount = { U: 0, D: 0, F: 0, B: 0, L: 0, R: 0 }
   for (const face of faces) {
     for (const row of state[face]) {
@@ -130,7 +140,7 @@ function validateCubeState(state) {
 
 module.exports = {
   detectColor,
-  extractFaceColors,
+  rgbToHsv,
   validateCubeState,
-  CUBE_COLORS
+  COLOR_RANGES
 }

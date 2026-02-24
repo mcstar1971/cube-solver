@@ -25,6 +25,7 @@
   <view class="status-area">
     <text class="status-text">{{statusText}}</text>
     <text class="hint-text">{{hintText}}</text>
+    <text class="debug-text" wx:if="{{debugInfo}}">{{debugInfo}}</text>
   </view>
 
   <!-- 进度指示 - 用颜色表示 -->
