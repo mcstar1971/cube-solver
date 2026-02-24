@@ -1,0 +1,42 @@
+<!-- pages/solve/solve.wxml -->
+<view class="container">
+  <!-- 3D魔方展示 -->
+  <view class="cube-container">
+    <canvas 
+      type="webgl" 
+      canvas-id="cubeCanvas" 
+      class="cube-canvas"
+      bindtouchstart="onTouchStart"
+      bindtouchmove="onTouchMove">
+    </canvas>
+  </view>
+
+  <!-- 当前步骤 -->
+  <view class="step-area">
+    <text class="step-number">步骤 {{currentStep}} / {{totalSteps}}</text>
+    <view class="move-display">
+      <text class="move-text">{{currentMove}}</text>
+      <text class="move-hint">{{moveHint}}</text>
+    </view>
+  </view>
+
+  <!-- 文本提示 -->
+  <view class="text-guide">
+    <text class="guide-text">{{guideText}}</text>
+  </view>
+
+  <!-- 控制按钮 -->
+  <view class="control-area">
+    <button class="btn-prev" bindtap="prevStep" disabled="{{currentStep <= 1}}">
+      上一步
+    </button>
+    <button class="btn-next" bindtap="nextStep">
+      {{currentStep >= totalSteps ? '完成' : '下一步'}}
+    </button>
+  </view>
+
+  <!-- 底部进度条 -->
+  <view class="progress-bar">
+    <view class="progress-fill" style="width: {{progress}}%"></view>
+  </view>
+</view>

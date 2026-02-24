@@ -1,0 +1,16 @@
+{
+  "pages": [
+    "pages/scan/scan",
+    "pages/solve/solve",
+    "pages/result/result"
+  ],
+  "window": {
+    "navigationBarTitleText": "Cube Solver",
+    "navigationBarBackgroundColor": "#000000",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#000000",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

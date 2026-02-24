@@ -1,0 +1,112 @@
+/* pages/solve/solve.wxss */
+
+.container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  padding: 0;
+}
+
+/* 3D魔方容器 */
+.cube-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.cube-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* 步骤显示 */
+.step-area {
+  padding: 40rpx;
+  text-align: center;
+  background: #111;
+}
+
+.step-number {
+  display: block;
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 20rpx;
+}
+
+.move-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.move-text {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 4rpx;
+}
+
+.move-hint {
+  font-size: 28rpx;
+  color: #888;
+  margin-top: 12rpx;
+}
+
+/* 文字引导 */
+.text-guide {
+  padding: 32rpx 40rpx;
+  text-align: center;
+}
+
+.guide-text {
+  font-size: 28rpx;
+  color: #aaa;
+  line-height: 1.6;
+}
+
+/* 控制按钮 */
+.control-area {
+  display: flex;
+  gap: 20rpx;
+  padding: 32rpx 40rpx;
+}
+
+.btn-prev, .btn-next {
+  flex: 1;
+  border-radius: 8rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  padding: 28rpx;
+}
+
+.btn-prev {
+  background: transparent;
+  color: #888;
+  border: 2rpx solid #333;
+}
+
+.btn-prev[disabled] {
+  color: #444;
+  border-color: #222;
+}
+
+.btn-next {
+  background: #fff;
+  color: #000;
+  border: none;
+}
+
+/* 进度条 */
+.progress-bar {
+  height: 6rpx;
+  background: #222;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #fff;
+  transition: width 0.3s ease;
+}

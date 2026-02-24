@@ -1,0 +1,44 @@
+<!-- pages/scan/scan.wxml -->
+<view class="container">
+  <!-- 摄像头区域 -->
+  <camera 
+    class="camera" 
+    device-position="back" 
+    flash="off"
+    binderror="onCameraError">
+    <!-- 扫描框 -->
+    <cover-view class="scan-frame">
+      <cover-view class="scan-corner tl"></cover-view>
+      <cover-view class="scan-corner tr"></cover-view>
+      <cover-view class="scan-corner bl"></cover-view>
+      <cover-view class="scan-corner br"></cover-view>
+    </cover-view>
+  </camera>
+
+  <!-- 状态显示 -->
+  <view class="status-area">
+    <text class="status-text">{{statusText}}</text>
+    <text class="hint-text">{{hintText}}</text>
+  </view>
+
+  <!-- 进度指示 -->
+  <view class="progress-area">
+    <view class="cube-faces">
+      <view class="face {{scanned.U ? 'scanned' : ''}}">U</view>
+      <view class="face {{scanned.D ? 'scanned' : ''}}">D</view>
+      <view class="face {{scanned.F ? 'scanned' : ''}}">F</view>
+      <view class="face {{scanned.B ? 'scanned' : ''}}">B</view>
+      <view class="face {{scanned.L ? 'scanned' : ''}}">L</view>
+      <view class="face {{scanned.R ? 'scanned' : ''}}">R</view>
+    </view>
+    <text class="progress-text">已扫描 {{scannedCount}}/6 面</text>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-area">
+    <button class="btn-scan" bindtap="startScan" disabled="{{isScanning}}">
+      {{isScanning ? '扫描中...' : '开始扫描'}}
+    </button>
+    <button class="btn-secondary" bindtap="resetScan">重置</button>
+  </view>
+</view>

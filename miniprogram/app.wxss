@@ -1,0 +1,46 @@
+/* app.wxss - 全局样式 - 极简主义 */
+
+page {
+  background-color: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  height: 100%;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40rpx;
+  box-sizing: border-box;
+}
+
+/* 极简按钮 */
+.btn-primary {
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 8rpx;
+  padding: 32rpx 64rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.btn-primary:active {
+  opacity: 0.8;
+}
+
+/* 文字样式 */
+.title {
+  font-size: 48rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+
+.subtitle {
+  font-size: 28rpx;
+  color: #888;
+  margin-top: 16rpx;
+}
