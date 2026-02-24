@@ -12,6 +12,12 @@
       <cover-view class="scan-corner tr"></cover-view>
       <cover-view class="scan-corner bl"></cover-view>
       <cover-view class="scan-corner br"></cover-view>
+      <!-- 3x3网格指示 -->
+      <cover-view class="grid-overlay">
+        <cover-view class="grid-row" wx:for="{{[0,1,2]}}" wx:key="*this">
+          <cover-view class="grid-cell" wx:for="{{[0,1,2]}}" wx:key="*this"></cover-view>
+        </cover-view>
+      </cover-view>
     </cover-view>
   </camera>
 
@@ -37,7 +43,7 @@
   <!-- 操作按钮 -->
   <view class="action-area">
     <button class="btn-scan" bindtap="startScan" disabled="{{isScanning}}">
-      {{isScanning ? '扫描中...' : '开始扫描'}}
+      {{scannedCount >= 6 ? '开始还原' : (isScanning ? '扫描中...' : '开始扫描')}}
     </button>
     <button class="btn-secondary" bindtap="resetScan">重置</button>
   </view>
