@@ -68,11 +68,15 @@ Page({
     this.cameraContext = wx.createCameraContext()
     
     this.listener = this.cameraContext.onCameraFrame((frame) => {
+      console.log('收到帧:', frame ? '有数据' : '无数据')
       this.processFrame(frame)
     })
 
+    console.log('准备启动帧监听...')
     this.listener.start({
-      success: () => console.log('帧监听启动成功'),
+      success: () => {
+        console.log('帧监听启动成功！')
+      },
       fail: (err) => {
         console.error('帧监听启动失败:', err)
         wx.showToast({ title: '启动扫描失败', icon: 'none' })
@@ -85,6 +89,7 @@ Page({
     if (!this.data.isScanning) return
 
     this.frameCount++
+    console.log('processFrame called, frameCount:', this.frameCount)
     
     // 每5帧处理一次（降低处理频率）
     if (this.frameCount % 5 !== 0) return
@@ -118,6 +123,8 @@ Page({
       }
       
       // 稳定性检测：同一个面连续检测（降低到2次）
+      console.log(`检测: centerColor=${centerColor}, lastDetectedFace=${this.lastDetectedFace}, faceStableCount=${this.faceStableCount}`)
+      
       if (centerColor === this.lastDetectedFace) {
         this.faceStableCount++
         
