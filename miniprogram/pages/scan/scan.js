@@ -146,6 +146,12 @@ Page({
   extractColorsFromFrame(frame) {
     const { data, width, height } = frame
     
+    // 检查数据有效性
+    if (!data || !width || !height || width <= 0 || height <= 0) {
+      console.log('帧数据无效:', { data: !!data, width, height })
+      return null
+    }
+    
     const centerX = Math.floor(width / 2)
     const centerY = Math.floor(height / 2)
     const scanSize = Math.min(width, height) * 0.35
@@ -155,6 +161,13 @@ Page({
     
     // 先取中心块的颜色来判断是哪个面
     const centerAvg = this.getAverageColor(data, width, height, centerX, centerY, 20)
+    
+    // 检查颜色值有效性
+    if (!centerAvg || isNaN(centerAvg[0])) {
+      console.log('颜色计算失败:', centerAvg)
+      return { colors: null, centerColor: null, avgRgb: [0, 0, 0], hsv: { h: 0, s: 0, v: 0 } }
+    }
+    
     const hsv = colorDetector.rgbToHsv(centerAvg[0], centerAvg[1], centerAvg[2])
     
     // 识别中心块颜色
@@ -192,12 +205,19 @@ Page({
         
         if (x >= 0 && x < width && y >= 0 && y < height) {
           const idx = (y * width + x) * 4
-          r += data[idx]
-          g += data[idx + 1]
-          b += data[idx + 2]
-          count++
+          // 检查索引是否有效
+          if (idx >= 0 && idx + 2 < data.length) {
+            r += data[idx] || 0
+            g += data[idx + 1] || 0
+            b += data[idx + 2] || 0
+            count++
+          }
         }
       }
+    }
+    
+    if (count === 0) {
+      return [128, 128, 128] // 返回灰色而不是NaN
     }
     
     return [Math.round(r / count), Math.round(g / count), Math.round(b / count)]
