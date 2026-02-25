@@ -152,6 +152,10 @@ Page({
       return null
     }
     
+    // 关键：data是ArrayBuffer，需要转成Uint8Array
+    const pixels = new Uint8Array(data)
+    console.log('帧数据:', { width, height, pixelsLength: pixels.length, firstFew: [pixels[0], pixels[1], pixels[2], pixels[3]] })
+    
     const centerX = Math.floor(width / 2)
     const centerY = Math.floor(height / 2)
     const scanSize = Math.min(width, height) * 0.35
@@ -160,7 +164,7 @@ Page({
     const colors = []
     
     // 先取中心块的颜色来判断是哪个面
-    const centerAvg = this.getAverageColor(data, width, height, centerX, centerY, 20)
+    const centerAvg = this.getAverageColor(pixels, width, height, centerX, centerY, 20)
     
     // 检查颜色值有效性
     if (!centerAvg || isNaN(centerAvg[0])) {
@@ -184,7 +188,7 @@ Page({
       for (let col = 0; col < 3; col++) {
         const sampleX = Math.floor(centerX - scanSize / 2 + col * cellSize + cellSize / 2)
         const sampleY = Math.floor(centerY - scanSize / 2 + row * cellSize + cellSize / 2)
-        const avgColor = this.getAverageColor(data, width, height, sampleX, sampleY, 12)
+        const avgColor = this.getAverageColor(pixels, width, height, sampleX, sampleY, 12)
         colors[row][col] = colorDetector.detectColor(avgColor) || centerColor
       }
     }
