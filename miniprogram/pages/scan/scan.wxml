@@ -5,6 +5,7 @@
     class="camera" 
     device-position="back" 
     flash="off"
+    frame-size="medium"
     binderror="onCameraError">
     <!-- 扫描框 -->
     <cover-view class="scan-frame">

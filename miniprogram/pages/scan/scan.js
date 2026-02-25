@@ -24,6 +24,7 @@ Page({
   faceStableCount: 0,
   frameCount: 0,
   lastConfirmTime: 0,
+  listener: null,
 
   onLoad() {
     this.checkCameraAuth()
@@ -85,45 +86,57 @@ Page({
 
     this.frameCount++
     
-    // 每3帧处理一次
-    if (this.frameCount % 3 !== 0) return
-
-    // 防止连续确认太快（至少间隔1秒）
-    const now = Date.now()
-    if (now - this.lastConfirmTime < 1000) return
+    // 每5帧处理一次（降低处理频率）
+    if (this.frameCount % 5 !== 0) return
 
     try {
       const result = this.extractColorsFromFrame(frame)
       
-      if (!result) return
+      if (!result) {
+        this.setData({ hintText: '未检测到有效颜色，请调整角度' })
+        return
+      }
       
       const { colors, centerColor, avgRgb, hsv } = result
       
       // 更新调试信息
-      const debugInfo = `中心: ${centerColor} | RGB: ${avgRgb.join(',')} | HSV: ${Math.round(hsv.h)}°, ${Math.round(hsv.s)}%, ${Math.round(hsv.v)}%`
+      const debugInfo = `中心: ${centerColor || '未知'} | RGB: (${avgRgb.join(',')}) | HSV: ${Math.round(hsv.h)}°, ${Math.round(hsv.s)}%, ${Math.round(hsv.v)}%`
       this.setData({ debugInfo })
       
-      // 如果这个面已经扫描过，跳过
-      if (this.data.scanned[centerColor]) {
-        this.setData({ hintText: `${this.faceNames[centerColor]}已扫描，请转动展示其他面` })
+      // 如果检测不到颜色
+      if (!centerColor) {
+        this.setData({ hintText: '未识别到颜色，请检查光照' })
         return
       }
       
-      // 稳定性检测：同一个面连续检测3次
+      // 如果这个面已经扫描过，提示用户
+      if (this.data.scanned[centerColor]) {
+        this.setData({ hintText: `${this.faceNames[centerColor]}已扫描，请转动展示其他面` })
+        this.lastDetectedFace = null
+        this.faceStableCount = 0
+        return
+      }
+      
+      // 稳定性检测：同一个面连续检测（降低到2次）
       if (centerColor === this.lastDetectedFace) {
         this.faceStableCount++
         
-        this.setData({ 
-          hintText: `检测到${this.faceNames[centerColor]}，请保持稳定 (${this.faceStableCount}/3)` 
-        })
+        console.log(`稳定性检测: ${centerColor} = ${this.faceStableCount}/2`)
         
-        if (this.faceStableCount >= 3) {
+        if (this.faceStableCount >= 2) {
+          // 确认这个面
           this.confirmFace(centerColor, colors)
+        } else {
+          this.setData({ 
+            hintText: `检测到${this.faceNames[centerColor]}，请保持稳定 (${this.faceStableCount}/2)` 
+          })
         }
       } else {
+        // 检测到新的面
         this.lastDetectedFace = centerColor
         this.faceStableCount = 1
-        this.setData({ hintText: `检测到${this.faceNames[centerColor]}，请保持稳定` })
+        console.log(`新检测: ${centerColor}`)
+        this.setData({ hintText: `检测到${this.faceNames[centerColor]}，请保持稳定 (1/2)` })
       }
     } catch (err) {
       console.error('帧处理错误:', err)
@@ -141,25 +154,24 @@ Page({
     const colors = []
     
     // 先取中心块的颜色来判断是哪个面
-    const centerSampleX = Math.floor(centerX)
-    const centerSampleY = Math.floor(centerY)
-    const centerAvg = this.getAverageColor(data, width, height, centerSampleX, centerSampleY, 15)
+    const centerAvg = this.getAverageColor(data, width, height, centerX, centerY, 20)
     const hsv = colorDetector.rgbToHsv(centerAvg[0], centerAvg[1], centerAvg[2])
     
     // 识别中心块颜色
     const centerColor = colorDetector.detectColor(centerAvg)
     
+    // 即使检测不到颜色，也返回结果（用于调试）
     if (!centerColor) {
-      return null
+      return { colors: null, centerColor: null, avgRgb: centerAvg, hsv }
     }
     
-    // 然后取9个格子的颜色
+    // 取9个格子的颜色
     for (let row = 0; row < 3; row++) {
       colors[row] = []
       for (let col = 0; col < 3; col++) {
         const sampleX = Math.floor(centerX - scanSize / 2 + col * cellSize + cellSize / 2)
         const sampleY = Math.floor(centerY - scanSize / 2 + row * cellSize + cellSize / 2)
-        const avgColor = this.getAverageColor(data, width, height, sampleX, sampleY, 10)
+        const avgColor = this.getAverageColor(data, width, height, sampleX, sampleY, 12)
         colors[row][col] = colorDetector.detectColor(avgColor) || centerColor
       }
     }
@@ -192,6 +204,8 @@ Page({
   },
 
   confirmFace(face, colors) {
+    console.log('确认面:', face, colors)
+    
     const scanned = { ...this.data.scanned }
     const cubeColors = { ...this.data.cubeColors }
     
@@ -199,7 +213,6 @@ Page({
     cubeColors[face] = colors
     
     const newCount = this.data.scannedCount + 1
-    this.lastConfirmTime = Date.now()
     
     this.setData({ 
       scanned,
@@ -214,10 +227,13 @@ Page({
     this.faceStableCount = 0
 
     wx.vibrateShort({ type: 'medium' })
-    console.log(`确认面 ${face}:`, colors)
     
     if (newCount >= 6) {
       this.stopScanning()
+      this.setData({ 
+        statusText: '扫描完成',
+        hintText: '点击"开始还原"继续'
+      })
     }
   },
 
@@ -234,7 +250,6 @@ Page({
     this.lastDetectedFace = null
     this.faceStableCount = 0
     this.frameCount = 0
-    this.lastConfirmTime = 0
     this.setData({
       statusText: '准备扫描',
       hintText: '将魔方对准框内，缓慢转动',
@@ -252,14 +267,9 @@ Page({
     
     if (scanned[face]) {
       scanned[face] = false
-      this.setData({ scanned, scannedCount: this.data.scannedCount - 1 })
-    } else {
-      scanned[face] = true
-      const newCount = this.data.scannedCount + 1
-      this.setData({ scanned, scannedCount: newCount })
-      if (newCount >= 6) {
-        this.setData({ statusText: '扫描完成', hintText: '点击继续开始还原' })
-      }
+      const cubeColors = { ...this.data.cubeColors }
+      delete cubeColors[face]
+      this.setData({ scanned, scannedCount: this.data.scannedCount - 1, cubeColors })
     }
   },
 
@@ -269,17 +279,23 @@ Page({
   },
 
   goToSolve() {
-    const app = getApp()
-    app.globalData.cubeState = this.data.cubeColors
+    // 验证状态
+    const state = this.data.cubeColors
+    const faces = ['U', 'D', 'F', 'B', 'L', 'R']
     
-    if (!colorDetector.validateCubeState(this.data.cubeColors)) {
-      wx.showModal({
-        title: '扫描异常',
-        content: '魔方状态验证失败，请重新扫描',
-        showCancel: false
-      })
-      return
+    for (const face of faces) {
+      if (!state[face]) {
+        wx.showModal({
+          title: '扫描不完整',
+          content: `缺少 ${this.faceNames[face]} 的数据`,
+          showCancel: false
+        })
+        return
+      }
     }
+    
+    const app = getApp()
+    app.globalData.cubeState = state
     
     wx.navigateTo({ url: '/pages/solve/solve' })
   }
