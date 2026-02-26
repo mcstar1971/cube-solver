@@ -49,20 +49,28 @@ Page({
   },
 
   startScan() {
+    console.log('=== startScan 被调用 ===')
+    
     if (this.data.scannedCount >= 6) {
       this.goToSolve()
       return
     }
+
+    // 先停止之前的监听
+    this.stopScanning()
 
     this.lastDetectedFace = null
     this.faceStableCount = 0
     this.frameCount = 0
     this.lastConfirmTime = 0
 
+    console.log('准备 setData...')
     this.setData({ 
       isScanning: true,
       statusText: '扫描中...',
       hintText: '请将魔方的白色中心块对准框内'
+    }, () => {
+      console.log('setData 完成，isScanning:', this.data.isScanning)
     })
 
     this.cameraContext = wx.createCameraContext()
@@ -86,10 +94,17 @@ Page({
   },
 
   processFrame(frame) {
-    if (!this.data.isScanning) return
+    // 检查扫描状态
+    if (!this.data.isScanning) {
+      console.log('processFrame: isScanning 为 false，跳过')
+      return
+    }
 
     this.frameCount++
-    console.log('processFrame called, frameCount:', this.frameCount)
+    // 每5帧打印一次，减少日志量
+    if (this.frameCount % 5 === 0) {
+      console.log('processFrame:', this.frameCount, 'lastDetectedFace:', this.lastDetectedFace, 'faceStableCount:', this.faceStableCount)
+    }
     
     // 每5帧处理一次（降低处理频率）
     if (this.frameCount % 5 !== 0) return
@@ -134,16 +149,18 @@ Page({
           // 确认这个面
           this.confirmFace(centerColor, colors)
         } else {
-          this.setData({ 
-            hintText: `检测到${this.faceNames[centerColor]}，请保持稳定 (${this.faceStableCount}/2)` 
-          })
+          const newHint = `检测到${this.faceNames[centerColor]}，请保持稳定 (${this.faceStableCount}/2)`
+          console.log('更新 hintText:', newHint)
+          this.setData({ hintText: newHint })
         }
       } else {
         // 检测到新的面
         this.lastDetectedFace = centerColor
         this.faceStableCount = 1
         console.log(`新检测: ${centerColor}`)
-        this.setData({ hintText: `检测到${this.faceNames[centerColor]}，请保持稳定 (1/2)` })
+        const newHint = `检测到${this.faceNames[centerColor]}，请保持稳定 (1/2)`
+        console.log('更新 hintText:', newHint)
+        this.setData({ hintText: newHint })
       }
     } catch (err) {
       console.error('帧处理错误:', err)
@@ -269,8 +286,14 @@ Page({
   },
 
   stopScanning() {
+    console.log('=== stopScanning 被调用 ===')
     if (this.listener) {
-      this.listener.stop()
+      try {
+        this.listener.stop()
+        console.log('帧监听已停止')
+      } catch (e) {
+        console.log('停止帧监听时出错:', e)
+      }
       this.listener = null
     }
     this.setData({ isScanning: false })
