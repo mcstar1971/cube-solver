@@ -137,10 +137,6 @@ Page({
       this.setData({ debugInfo })
       console.log('debugInfo 已更新:', debugInfo)
       
-      // 更新调试信息
-      const debugInfo = `中心: ${centerColor || '未知'} | RGB: (${avgRgb.join(',')}) | HSV: ${Math.round(hsv.h)}°, ${Math.round(hsv.s)}%, ${Math.round(hsv.v)}%`
-      this.setData({ debugInfo })
-      
       // 如果检测不到颜色
       if (!centerColor) {
         this.setData({ hintText: '未识别到颜色，请检查光照' })
