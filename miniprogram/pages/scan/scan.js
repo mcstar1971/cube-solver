@@ -196,7 +196,8 @@ Page({
       }
       
       const threshold = Math.floor(this.colorHistoryMax * 0.6)  // 60%阈值
-      console.log(`颜色历史: ${this.colorHistory.join(',')} | 最多: ${maxColor}=${maxCount}/${this.colorHistory.length} | 阈值: ${threshold}`)
+      const progress = Math.min(maxCount, threshold)
+      console.log(`颜色历史[${this.colorHistory.length}]: ${this.colorHistory.join(',')} | 最多: ${maxColor}=${maxCount} | 进度: ${progress}/${threshold}`)
       
       if (maxCount >= threshold && this.colorHistory.length >= this.colorHistoryMax * 0.8) {
         // 稳定检测到某个颜色
@@ -204,12 +205,12 @@ Page({
         
         if (!this.data.scanned[stableColor]) {
           // 确认这个面
+          console.log(`=== 确认面: ${stableColor} ===`)
           this.confirmFace(stableColor, colors)
           this.colorHistory = []  // 清空历史，准备检测下一个面
         }
       } else {
         // 还不够稳定，继续检测
-        const progress = Math.min(maxCount, threshold)
         const hintColor = maxColor || centerColor
         this.setData({ 
           hintText: `检测到${this.faceNames[hintColor]}... (${progress}/${threshold})` 

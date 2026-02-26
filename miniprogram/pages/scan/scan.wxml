@@ -59,6 +59,6 @@
     <button class="btn-scan" bindtap="startScan" disabled="{{isScanning}}">
       {{scannedCount >= 6 ? '开始还原' : (isScanning ? '扫描中...' : '开始扫描')}}
     </button>
-    <button class="btn-secondary" bindtap="resetScan">重置</button>
+    <button class="btn-secondary" bindtap="resetScan" disabled="{{isScanning}}">重置</button>
   </view>
 </view>
