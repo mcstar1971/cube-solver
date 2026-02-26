@@ -31,7 +31,17 @@ Page({
   },
 
   onUnload() {
+    console.log('=== onUnload 被调用 ===')
     this.stopScanning()
+  },
+
+  onHide() {
+    console.log('=== onHide 被调用 ===')
+    this.stopScanning()
+  },
+
+  onShow() {
+    console.log('=== onShow 被调用 ===')
   },
 
   checkCameraAuth() {
@@ -82,7 +92,12 @@ Page({
     this.cameraContext = wx.createCameraContext()
     
     this.listener = this.cameraContext.onCameraFrame((frame) => {
-      console.log('收到帧:', frame ? '有数据' : '无数据')
+      // 简单计数，确认回调在工作
+      if (!this._frameTotalCount) this._frameTotalCount = 0
+      this._frameTotalCount++
+      if (this._frameTotalCount % 20 === 0) {
+        console.log('onCameraFrame 回调总数:', this._frameTotalCount)
+      }
       this.processFrame(frame)
     })
 
@@ -315,6 +330,8 @@ Page({
   },
 
   resetScan() {
+    console.log('=== resetScan 被调用 ===')
+    console.trace('resetScan 调用栈')
     this.stopScanning()
     this.lastDetectedFace = null
     this.faceStableCount = 0
