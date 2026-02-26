@@ -20,6 +20,10 @@ Page({
     B: '橙色面', L: '绿色面', R: '蓝色面'
   },
 
+  // 滑动窗口记录最近的颜色检测结果
+  colorHistory: [],  // 最近N帧的颜色
+  colorHistoryMax: 10,  // 窗口大小
+
   lastDetectedFace: null,
   faceStableCount: 0,
   frameCount: 0,
@@ -79,6 +83,8 @@ Page({
     this.faceStableCount = 0
     this.frameCount = 0
     this.lastConfirmTime = 0
+    this.colorHistory = []  // 清空颜色历史
+    this._frameTotalCount = 0
 
     console.log('准备 setData...')
     this.setData({ 
@@ -155,41 +161,59 @@ Page({
       // 如果检测不到颜色
       if (!centerColor) {
         this.setData({ hintText: '未识别到颜色，请检查光照' })
+        // 清空历史
+        this.colorHistory = []
         return
       }
       
-      // 如果这个面已经扫描过，提示用户
+      // 如果这个面已经扫描过，清空历史，提示用户
       if (this.data.scanned[centerColor]) {
+        this.colorHistory = []
         this.setData({ hintText: `${this.faceNames[centerColor]}已扫描，请转动展示其他面` })
-        this.lastDetectedFace = null
-        this.faceStableCount = 0
         return
       }
       
-      // 稳定性检测：同一个面连续检测（降低到2次）
-      console.log(`检测: centerColor=${centerColor}, lastDetectedFace=${this.lastDetectedFace}, faceStableCount=${this.faceStableCount}`)
+      // 滑动窗口统计：记录最近的检测结果
+      this.colorHistory.push(centerColor)
+      if (this.colorHistory.length > this.colorHistoryMax) {
+        this.colorHistory.shift()  // 移除最旧的
+      }
       
-      if (centerColor === this.lastDetectedFace) {
-        this.faceStableCount++
+      // 统计各颜色出现次数
+      const colorCounts = {}
+      for (const c of this.colorHistory) {
+        colorCounts[c] = (colorCounts[c] || 0) + 1
+      }
+      
+      // 找出出现次数最多的颜色
+      let maxColor = null
+      let maxCount = 0
+      for (const [c, count] of Object.entries(colorCounts)) {
+        if (count > maxCount) {
+          maxColor = c
+          maxCount = count
+        }
+      }
+      
+      const threshold = Math.floor(this.colorHistoryMax * 0.6)  // 60%阈值
+      console.log(`颜色历史: ${this.colorHistory.join(',')} | 最多: ${maxColor}=${maxCount}/${this.colorHistory.length} | 阈值: ${threshold}`)
+      
+      if (maxCount >= threshold && this.colorHistory.length >= this.colorHistoryMax * 0.8) {
+        // 稳定检测到某个颜色
+        const stableColor = maxColor
         
-        console.log(`稳定性检测: ${centerColor} = ${this.faceStableCount}/2`)
-        
-        if (this.faceStableCount >= 2) {
+        if (!this.data.scanned[stableColor]) {
           // 确认这个面
-          this.confirmFace(centerColor, colors)
-        } else {
-          const newHint = `检测到${this.faceNames[centerColor]}，请保持稳定 (${this.faceStableCount}/2)`
-          console.log('更新 hintText:', newHint)
-          this.setData({ hintText: newHint })
+          this.confirmFace(stableColor, colors)
+          this.colorHistory = []  // 清空历史，准备检测下一个面
         }
       } else {
-        // 检测到新的面
-        this.lastDetectedFace = centerColor
-        this.faceStableCount = 1
-        console.log(`新检测: ${centerColor}`)
-        const newHint = `检测到${this.faceNames[centerColor]}，请保持稳定 (1/2)`
-        console.log('更新 hintText:', newHint)
-        this.setData({ hintText: newHint })
+        // 还不够稳定，继续检测
+        const progress = Math.min(maxCount, threshold)
+        const hintColor = maxColor || centerColor
+        this.setData({ 
+          hintText: `检测到${this.faceNames[hintColor]}... (${progress}/${threshold})` 
+        })
       }
     } catch (err) {
       console.error('帧处理错误:', err)
@@ -336,6 +360,8 @@ Page({
     this.lastDetectedFace = null
     this.faceStableCount = 0
     this.frameCount = 0
+    this.colorHistory = []  // 清空颜色历史
+    this._frameTotalCount = 0
     this.setData({
       statusText: '准备扫描',
       hintText: '将魔方对准框内，缓慢转动',
