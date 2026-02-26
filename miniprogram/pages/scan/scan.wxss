@@ -1,4 +1,4 @@
-/* pages/scan/scan.wxss */
+/* pages/scan/scan.wxss - 拍照模式 */
 
 .container {
   height: 100vh;
@@ -10,7 +10,7 @@
 /* 摄像头 */
 .camera {
   width: 100%;
-  height: 60vh;
+  height: 55vh;
   position: relative;
 }
 
@@ -88,77 +88,118 @@
   border: 2rpx solid rgba(255, 255, 255, 0.2);
 }
 
+/* 当前面提示 */
+.current-face-hint {
+  position: absolute;
+  bottom: 40rpx;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.hint-box {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 16rpx 32rpx;
+  border-radius: 8rpx;
+}
+
+.hint-text {
+  color: #fff;
+  font-size: 28rpx;
+}
+
 /* 状态显示 */
 .status-area {
-  padding: 40rpx;
+  padding: 30rpx 40rpx 20rpx;
   text-align: center;
 }
 
 .status-text {
   display: block;
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: #fff;
 }
 
 .hint-text {
   display: block;
-  font-size: 26rpx;
+  font-size: 24rpx;
   color: #888;
-  margin-top: 16rpx;
-}
-
-.debug-text {
-  display: block;
-  font-size: 20rpx;
-  color: #555;
   margin-top: 12rpx;
-  font-family: monospace;
 }
 
-/* 进度指示 */
-.progress-area {
-  padding: 0 40rpx;
+/* 已拍摄的面 */
+.captured-area {
+  padding: 20rpx 40rpx;
 }
 
-.cube-faces {
+.captured-faces {
   display: flex;
   justify-content: center;
-  gap: 20rpx;
-  margin-bottom: 20rpx;
+  gap: 16rpx;
+  flex-wrap: wrap;
 }
 
-.face {
-  width: 80rpx;
-  height: 80rpx;
+.captured-face {
+  width: 90rpx;
+  height: 110rpx;
   border: 4rpx solid #333;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  opacity: 0.5;
+  transition: all 0.3s;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+.captured-face.done {
+  opacity: 1;
+  border-color: #4CAF50;
+}
+
+.face-thumb {
+  width: 100%;
+  height: 70rpx;
+  object-fit: cover;
+}
+
+.face-placeholder {
+  width: 100%;
+  height: 70rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24rpx;
-  color: #000;
-  transition: all 0.3s;
-  opacity: 0.4;
+  background: #2a2a2a;
 }
 
-/* 各面颜色 */
-.face-white { background: #FFFFFF; }
-.face-yellow { background: #FFFF00; }
-.face-red { background: #FF0000; color: #fff; }
-.face-orange { background: #FFA500; }
-.face-green { background: #00FF00; }
-.face-blue { background: #0000FF; color: #fff; }
-
-/* 已扫描状态 */
-.face.scanned {
-  opacity: 1;
-  border-color: #fff;
-  box-shadow: 0 0 20rpx rgba(255, 255, 255, 0.5);
+.face-icon {
+  font-size: 36rpx;
 }
 
-.face-label {
-  font-weight: 600;
+.captured-label {
+  font-size: 20rpx;
+  color: #888;
+  margin-top: 4rpx;
+}
+
+.check-mark {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 28rpx;
+  height: 28rpx;
+  background: #4CAF50;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18rpx;
+  color: #fff;
 }
 
 .progress-text {
@@ -166,28 +207,143 @@
   text-align: center;
   font-size: 24rpx;
   color: #666;
+  margin-top: 16rpx;
+}
+
+/* 识别结果弹窗 */
+.result-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: #1a1a1a;
+  border-radius: 16rpx;
+  padding: 40rpx;
+  width: 85%;
+  max-width: 600rpx;
+}
+
+.modal-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+}
+
+.modal-hint {
+  display: block;
+  font-size: 28rpx;
+  color: #888;
+  text-align: center;
+  margin-top: 12rpx;
+}
+
+/* 颜色预览 */
+.color-preview {
+  margin-top: 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.preview-row {
+  display: flex;
+  gap: 8rpx;
+}
+
+.preview-cell {
+  width: 70rpx;
+  height: 70rpx;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #000;
+}
+
+.c-white { background: #FFFFFF; border: 2rpx solid #ccc; }
+.c-yellow { background: #FFEB3B; }
+.c-red { background: #F44336; color: #fff; }
+.c-orange { background: #FF9800; }
+.c-green { background: #4CAF50; }
+.c-blue { background: #2196F3; color: #fff; }
+
+.modal-tip {
+  display: block;
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
+  margin-top: 20rpx;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 30rpx;
+}
+
+.btn-retry {
+  flex: 1;
+  background: transparent;
+  color: #888;
+  border: 2rpx solid #444;
+  border-radius: 8rpx;
+  padding: 24rpx;
+  font-size: 28rpx;
+}
+
+.btn-confirm {
+  flex: 1;
+  background: #4CAF50;
+  color: #fff;
+  border: none;
+  border-radius: 8rpx;
+  padding: 24rpx;
+  font-size: 28rpx;
+  font-weight: 600;
 }
 
 /* 操作按钮 */
 .action-area {
-  padding: 40rpx;
+  padding: 30rpx 40rpx 50rpx;
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 16rpx;
   margin-top: auto;
 }
 
-.btn-scan {
+.btn-capture {
   background: #fff;
   color: #000;
   border: none;
-  border-radius: 8rpx;
-  padding: 32rpx;
+  border-radius: 12rpx;
+  padding: 28rpx;
   font-size: 32rpx;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
 }
 
-.btn-scan[disabled] {
+.capture-icon {
+  font-size: 40rpx;
+}
+
+.btn-capture[disabled] {
   background: #333;
   color: #666;
 }
@@ -197,6 +353,14 @@
   color: #888;
   border: 2rpx solid #333;
   border-radius: 8rpx;
-  padding: 24rpx;
-  font-size: 28rpx;
+  padding: 20rpx;
+  font-size: 26rpx;
+}
+
+/* 隐藏的 canvas */
+#photoCanvas {
+  position: absolute;
+  left: -9999rpx;
+  width: 300px;
+  height: 300px;
 }

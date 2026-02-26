@@ -1,11 +1,12 @@
-<!-- pages/scan/scan.wxml -->
+<!-- pages/scan/scan.wxml - 拍照模式 -->
 <view class="container">
+  <!-- 隐藏的 canvas 用于图片处理 -->
+  <canvas type="2d" id="photoCanvas" canvas-id="photoCanvas"></canvas>
   <!-- 摄像头区域 -->
   <camera 
     class="camera" 
     device-position="back" 
-    flash="off"
-    frame-size="medium"
+    flash="auto"
     binderror="onCameraError">
     <!-- 扫描框 -->
     <cover-view class="scan-frame">
@@ -20,45 +21,70 @@
         </cover-view>
       </cover-view>
     </cover-view>
+    <!-- 当前要拍的面 -->
+    <cover-view class="current-face-hint">
+      <cover-view class="hint-box">
+        <cover-view class="hint-text">请对准{{currentFaceName}}</cover-view>
+      </cover-view>
+    </cover-view>
   </camera>
 
   <!-- 状态显示 -->
   <view class="status-area">
     <text class="status-text">{{statusText}}</text>
     <text class="hint-text">{{hintText}}</text>
-    <text class="debug-text" wx:if="{{debugInfo}}">{{debugInfo}}</text>
   </view>
 
-  <!-- 进度指示 - 用颜色表示 -->
-  <view class="progress-area">
-    <view class="cube-faces">
-      <view class="face face-white {{scanned.U ? 'scanned' : ''}}" bindtap="toggleFace" data-face="U">
-        <text class="face-label">白</text>
+  <!-- 已拍摄的面 - 缩略图 -->
+  <view class="captured-area">
+    <view class="captured-faces">
+      <block wx:for="{{faceOrder}}" wx:key="*this">
+        <view class="captured-face {{captured[item] ? 'done' : ''}}" bindtap="onFaceTap" data-face="{{item}}">
+          <image wx:if="{{facePhotos[item]}}" class="face-thumb" src="{{facePhotos[item]}}" mode="aspectFill"></image>
+          <view wx:else class="face-placeholder">
+            <text class="face-icon">{{faceIcons[item]}}</text>
+          </view>
+          <text class="captured-label">{{faceShortNames[item]}}</text>
+          <view wx:if="{{captured[item]}}" class="check-mark">✓</view>
+        </view>
+      </block>
+    </view>
+    <text class="progress-text">{{capturedCount}}/6 面</text>
+  </view>
+
+  <!-- 识别结果弹窗 -->
+  <view class="result-modal" wx:if="{{showResultModal}}">
+    <view class="modal-content">
+      <text class="modal-title">识别结果</text>
+      <text class="modal-hint">{{currentFaceName}}</text>
+      
+      <!-- 3x3 颜色预览 -->
+      <view class="color-preview">
+        <view class="preview-row" wx:for="{{detectedColors}}" wx:key="index" wx:for-index="rowIdx">
+          <view class="preview-cell {{item === 'U' ? 'c-white' : item === 'D' ? 'c-yellow' : item === 'F' ? 'c-red' : item === 'B' ? 'c-orange' : item === 'L' ? 'c-green' : 'c-blue'}}" 
+                wx:for="{{item}}" wx:key="*this" wx:for-item="color">
+            <text>{{colorLabels[color]}}</text>
+          </view>
+        </view>
       </view>
-      <view class="face face-yellow {{scanned.D ? 'scanned' : ''}}" bindtap="toggleFace" data-face="D">
-        <text class="face-label">黄</text>
-      </view>
-      <view class="face face-red {{scanned.F ? 'scanned' : ''}}" bindtap="toggleFace" data-face="F">
-        <text class="face-label">红</text>
-      </view>
-      <view class="face face-orange {{scanned.B ? 'scanned' : ''}}" bindtap="toggleFace" data-face="B">
-        <text class="face-label">橙</text>
-      </view>
-      <view class="face face-green {{scanned.L ? 'scanned' : ''}}" bindtap="toggleFace" data-face="L">
-        <text class="face-label">绿</text>
-      </view>
-      <view class="face face-blue {{scanned.R ? 'scanned' : ''}}" bindtap="toggleFace" data-face="R">
-        <text class="face-label">蓝</text>
+      
+      <!-- 提示 -->
+      <text class="modal-tip">如果识别有误，可以重拍或手动调整</text>
+      
+      <!-- 操作按钮 -->
+      <view class="modal-buttons">
+        <button class="btn-retry" bindtap="retryPhoto">重拍</button>
+        <button class="btn-confirm" bindtap="confirmPhoto">确认</button>
       </view>
     </view>
-    <text class="progress-text">已扫描 {{scannedCount}}/6 面（点击可手动标记）</text>
   </view>
 
   <!-- 操作按钮 -->
   <view class="action-area">
-    <button class="btn-scan" bindtap="startScan" disabled="{{isScanning}}">
-      {{scannedCount >= 6 ? '开始还原' : (isScanning ? '扫描中...' : '开始扫描')}}
+    <button class="btn-capture" bindtap="takePhoto" disabled="{{isProcessing || showResultModal}}">
+      <text class="capture-icon">📷</text>
+      <text>拍照</text>
     </button>
-    <button class="btn-secondary" bindtap="resetScan" disabled="{{isScanning}}">重置</button>
+    <button class="btn-secondary" bindtap="resetScan">重置</button>
   </view>
 </view>

@@ -62,14 +62,25 @@ class SimpleSolver {
         return this.fallbackSolve()
       }
       
-      // 使用真正的求解算法
-      const solution = solver.solveCube(
+      // 先尝试双向BFS（适合短解）
+      let solution = solver.solveCube(
         this.cubeState.cp,
         this.cubeState.co,
         this.cubeState.ep,
         this.cubeState.eo,
-        'ida' // 使用IDA*算法
+        'bfs'
       )
+      
+      // 如果BFS失败（解法太长），尝试IDA*
+      if (!solution) {
+        solution = solver.solveCube(
+          this.cubeState.cp,
+          this.cubeState.co,
+          this.cubeState.ep,
+          this.cubeState.eo,
+          'ida'
+        )
+      }
       
       if (solution) {
         return solution
