@@ -107,16 +107,21 @@ Page({
     }
 
     this.frameCount++
-    // 每5帧打印一次，减少日志量
-    if (this.frameCount % 5 === 0) {
-      console.log('processFrame:', this.frameCount, 'lastDetectedFace:', this.lastDetectedFace, 'faceStableCount:', this.faceStableCount)
+    
+    // 每帧都打印关键信息（调试用）
+    if (this.frameCount <= 20 || this.frameCount % 10 === 0) {
+      console.log('processFrame:', this.frameCount, 'isScanning:', this.data.isScanning)
     }
     
     // 每5帧处理一次（降低处理频率）
     if (this.frameCount % 5 !== 0) return
+    
+    console.log('=== 开始处理帧', this.frameCount, '===')
 
     try {
       const result = this.extractColorsFromFrame(frame)
+      
+      console.log('extractColorsFromFrame 返回:', result ? '有结果' : 'null')
       
       if (!result) {
         this.setData({ hintText: '未检测到有效颜色，请调整角度' })
@@ -124,6 +129,13 @@ Page({
       }
       
       const { colors, centerColor, avgRgb, hsv } = result
+      
+      console.log('检测结果:', { centerColor, avgRgb, hsv })
+      
+      // 更新调试信息（每次都更新）
+      const debugInfo = `中心: ${centerColor || '未知'} | RGB: (${avgRgb.join(',')}) | HSV: ${Math.round(hsv.h)}°, ${Math.round(hsv.s)}%, ${Math.round(hsv.v)}%`
+      this.setData({ debugInfo })
+      console.log('debugInfo 已更新:', debugInfo)
       
       // 更新调试信息
       const debugInfo = `中心: ${centerColor || '未知'} | RGB: (${avgRgb.join(',')}) | HSV: ${Math.round(hsv.h)}°, ${Math.round(hsv.s)}%, ${Math.round(hsv.v)}%`
