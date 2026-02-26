@@ -51,12 +51,18 @@ Page({
   startScan() {
     console.log('=== startScan 被调用 ===')
     
+    // 防止重复调用
+    if (this.data.isScanning) {
+      console.log('已经在扫描中，忽略重复调用')
+      return
+    }
+    
     if (this.data.scannedCount >= 6) {
       this.goToSolve()
       return
     }
 
-    // 先停止之前的监听
+    // 先停止之前的监听（以防万一）
     this.stopScanning()
 
     this.lastDetectedFace = null
@@ -287,6 +293,7 @@ Page({
 
   stopScanning() {
     console.log('=== stopScanning 被调用 ===')
+    console.trace('stopScanning 调用栈')  // 打印调用栈
     if (this.listener) {
       try {
         this.listener.stop()
