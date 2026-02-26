@@ -138,8 +138,9 @@ Page({
       // 每帧都检测颜色（快速累积历史）
       const result = this.extractColorsFromFrame(frame)
       
-      if (!result || !result.centerColor) {
-        // 每5帧才更新提示文字
+      // 检查是否返回有效结果
+      if (!result) {
+        console.log(`帧${this.frameCount}: extractColorsFromFrame 返回 null`)
         if (this.frameCount % 5 === 0) {
           this.setData({ hintText: '未检测到有效颜色，请调整角度' })
         }
@@ -147,6 +148,14 @@ Page({
       }
       
       const { colors, centerColor, avgRgb, hsv } = result
+      
+      if (!centerColor) {
+        console.log(`帧${this.frameCount}: centerColor 为 null, avgRgb: ${avgRgb}`)
+        if (this.frameCount % 5 === 0) {
+          this.setData({ hintText: '未识别到颜色，请检查光照' })
+        }
+        return
+      }
       
       // 更新调试信息（每5帧）
       if (this.frameCount % 5 === 0) {
@@ -168,6 +177,9 @@ Page({
       if (this.colorHistory.length > this.colorHistoryMax) {
         this.colorHistory.shift()  // 移除最旧的
       }
+      
+      // 每帧都打印进度（调试用）
+      console.log(`帧${this.frameCount}: 检测到${centerColor}, 历史[${this.colorHistory.length}]: ${this.colorHistory.join(',')}`)
       
       // 统计各颜色出现次数
       const colorCounts = {}
