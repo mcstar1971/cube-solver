@@ -133,43 +133,33 @@ Page({
     if (this.frameCount <= 20 || this.frameCount % 10 === 0) {
       console.log('processFrame:', this.frameCount, 'isScanning:', this.data.isScanning)
     }
-    
-    // 每5帧处理一次（降低处理频率）
-    if (this.frameCount % 5 !== 0) return
-    
-    console.log('=== 开始处理帧', this.frameCount, '===')
 
     try {
+      // 每帧都检测颜色（快速累积历史）
       const result = this.extractColorsFromFrame(frame)
       
-      console.log('extractColorsFromFrame 返回:', result ? '有结果' : 'null')
-      
-      if (!result) {
-        this.setData({ hintText: '未检测到有效颜色，请调整角度' })
+      if (!result || !result.centerColor) {
+        // 每5帧才更新提示文字
+        if (this.frameCount % 5 === 0) {
+          this.setData({ hintText: '未检测到有效颜色，请调整角度' })
+        }
         return
       }
       
       const { colors, centerColor, avgRgb, hsv } = result
       
-      console.log('检测结果:', { centerColor, avgRgb, hsv })
-      
-      // 更新调试信息（每次都更新）
-      const debugInfo = `中心: ${centerColor || '未知'} | RGB: (${avgRgb.join(',')}) | HSV: ${Math.round(hsv.h)}°, ${Math.round(hsv.s)}%, ${Math.round(hsv.v)}%`
-      this.setData({ debugInfo })
-      console.log('debugInfo 已更新:', debugInfo)
-      
-      // 如果检测不到颜色
-      if (!centerColor) {
-        this.setData({ hintText: '未识别到颜色，请检查光照' })
-        // 清空历史
-        this.colorHistory = []
-        return
+      // 更新调试信息（每5帧）
+      if (this.frameCount % 5 === 0) {
+        const debugInfo = `中心: ${centerColor || '未知'} | RGB: (${avgRgb.join(',')}) | HSV: ${Math.round(hsv.h)}°, ${Math.round(hsv.s)}%, ${Math.round(hsv.v)}%`
+        this.setData({ debugInfo })
       }
       
       // 如果这个面已经扫描过，清空历史，提示用户
       if (this.data.scanned[centerColor]) {
         this.colorHistory = []
-        this.setData({ hintText: `${this.faceNames[centerColor]}已扫描，请转动展示其他面` })
+        if (this.frameCount % 5 === 0) {
+          this.setData({ hintText: `${this.faceNames[centerColor]}已扫描，请转动展示其他面` })
+        }
         return
       }
       
@@ -197,7 +187,11 @@ Page({
       
       const threshold = Math.floor(this.colorHistoryMax * 0.6)  // 60%阈值
       const progress = Math.min(maxCount, threshold)
-      console.log(`颜色历史[${this.colorHistory.length}]: ${this.colorHistory.join(',')} | 最多: ${maxColor}=${maxCount} | 进度: ${progress}/${threshold}`)
+      
+      // 每5帧打印一次日志
+      if (this.frameCount % 5 === 0) {
+        console.log(`颜色历史[${this.colorHistory.length}]: ${this.colorHistory.slice(-5).join(',')} | 最多: ${maxColor}=${maxCount} | 进度: ${progress}/${threshold}`)
+      }
       
       if (maxCount >= threshold && this.colorHistory.length >= this.colorHistoryMax * 0.8) {
         // 稳定检测到某个颜色
@@ -210,11 +204,13 @@ Page({
           this.colorHistory = []  // 清空历史，准备检测下一个面
         }
       } else {
-        // 还不够稳定，继续检测
-        const hintColor = maxColor || centerColor
-        this.setData({ 
-          hintText: `检测到${this.faceNames[hintColor]}... (${progress}/${threshold})` 
-        })
+        // 还不够稳定，继续检测（每5帧更新UI）
+        if (this.frameCount % 5 === 0) {
+          const hintColor = maxColor || centerColor
+          this.setData({ 
+            hintText: `检测到${this.faceNames[hintColor]}... (${progress}/${threshold})` 
+          })
+        }
       }
     } catch (err) {
       console.error('帧处理错误:', err)
