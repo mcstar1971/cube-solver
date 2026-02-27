@@ -1,7 +1,8 @@
 <!-- pages/scan/scan.wxml - 拍照模式 -->
 <view class="container">
-  <!-- 隐藏的 canvas 用于图片处理 -->
-  <canvas type="2d" id="photoCanvas" canvas-id="photoCanvas"></canvas>
+  <!-- 页面内 canvas 用于图片处理（隐藏） -->
+  <canvas type="2d" id="photoCanvas" class="hidden-canvas"></canvas>
+  
   <!-- 摄像头区域 -->
   <camera 
     class="camera" 
@@ -86,7 +87,7 @@
               <view class="debug-cell" wx:for="{{item}}" wx:key="*this" wx:for-item="cell">
                 <view class="debug-color c-{{cell.detected}}"></view>
                 <text class="debug-text">R{{cell.rgb[0]}} G{{cell.rgb[1]}} B{{cell.rgb[2]}}</text>
-                <text class="debug-text">H{{cell.hsv.h}} S{{cell.hsv.s}} V{{cell.hsv.v}}</text>
+                <text class="debug-text">H{{Math.round(cell.hsv.h)}} S{{Math.round(cell.hsv.s)}} V{{Math.round(cell.hsv.v)}}</text>
                 <text class="debug-result">→{{colorLabels[cell.detected]}}</text>
               </view>
             </view>

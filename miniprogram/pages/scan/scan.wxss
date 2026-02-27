@@ -436,10 +436,12 @@
   font-size: 24rpx;
 }
 
-/* 隐藏的 canvas */
-#photoCanvas {
+/* 隐藏的 canvas - 必须在可视区域内才能工作 */
+.hidden-canvas {
   position: absolute;
   left: -9999rpx;
-  width: 1px;
-  height: 1px;
+  top: 0;
+  width: 400px;
+  height: 400px;
+  visibility: hidden;
 }
