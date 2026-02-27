@@ -52,31 +52,48 @@
     <text class="progress-text">{{capturedCount}}/6 面</text>
   </view>
 
-  <!-- 识别结果弹窗 -->
+  <!-- 识别结果弹窗 - 调试版 -->
   <view class="result-modal" wx:if="{{showResultModal}}">
-    <view class="modal-content">
-      <text class="modal-title">识别结果</text>
-      <text class="modal-hint">{{currentFaceName}}</text>
-      
-      <!-- 3x3 颜色预览 -->
-      <view class="color-preview">
-        <view class="preview-row" wx:for="{{detectedColors}}" wx:key="index" wx:for-index="rowIdx">
-          <view class="preview-cell {{item === 'U' ? 'c-white' : item === 'D' ? 'c-yellow' : item === 'F' ? 'c-red' : item === 'B' ? 'c-orange' : item === 'L' ? 'c-green' : 'c-blue'}}" 
-                wx:for="{{item}}" wx:key="*this" wx:for-item="color">
-            <text>{{colorLabels[color]}}</text>
+    <scroll-view scroll-y class="modal-scroll">
+      <view class="modal-content">
+        <text class="modal-title">识别结果</text>
+        <text class="modal-hint">{{currentFaceName}}</text>
+        
+        <!-- 拍摄的照片 -->
+        <view class="photo-section">
+          <text class="section-label">📷 拍摄照片</text>
+          <image class="captured-photo" src="{{currentPhotoPath}}" mode="aspectFit"></image>
+        </view>
+        
+        <!-- 识别的颜色 -->
+        <view class="color-section">
+          <text class="section-label">🎨 识别颜色</text>
+          <view class="color-preview">
+            <view class="preview-row" wx:for="{{detectedColors}}" wx:key="index">
+              <view class="preview-cell c-{{item}}" 
+                    wx:for="{{item}}" wx:key="*this" wx:for-item="color">
+                <text>{{colorLabels[color]}}</text>
+              </view>
+            </view>
           </view>
         </view>
+        
+        <!-- 调试信息 -->
+        <view class="debug-section" wx:if="{{debugInfo}}">
+          <text class="section-label">🔧 调试信息</text>
+          <text class="debug-text">{{debugInfo}}</text>
+        </view>
+        
+        <!-- 提示 -->
+        <text class="modal-tip">请对比照片和识别结果是否一致</text>
+        
+        <!-- 操作按钮 -->
+        <view class="modal-buttons">
+          <button class="btn-retry" bindtap="retryPhoto">重拍</button>
+          <button class="btn-confirm" bindtap="confirmPhoto">确认</button>
+        </view>
       </view>
-      
-      <!-- 提示 -->
-      <text class="modal-tip">如果识别有误，可以重拍或手动调整</text>
-      
-      <!-- 操作按钮 -->
-      <view class="modal-buttons">
-        <button class="btn-retry" bindtap="retryPhoto">重拍</button>
-        <button class="btn-confirm" bindtap="confirmPhoto">确认</button>
-      </view>
-    </view>
+    </scroll-view>
   </view>
 
   <!-- 操作按钮 -->
