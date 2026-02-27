@@ -71,7 +71,7 @@
           <text class="section-label">🎨 识别颜色</text>
           <view class="color-preview">
             <view class="preview-row" wx:for="{{detectedColors}}" wx:key="index">
-              <view class="preview-cell c-{{item}}" 
+              <view class="preview-cell c-{{color}}" 
                     wx:for="{{item}}" wx:key="*this" wx:for-item="color">
                 <text>{{colorLabels[color]}}</text>
               </view>
