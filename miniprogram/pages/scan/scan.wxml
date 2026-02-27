@@ -108,9 +108,11 @@
 
   <!-- 操作按钮 -->
   <view class="action-area">
-    <button class="btn-capture" bindtap="takePhoto" disabled="{{isProcessing || showResultModal}}">
-      <text class="capture-icon">📷</text>
-      <text>拍照</text>
+    <button class="btn-capture {{capturedCount >= 6 ? 'btn-start' : ''}}" 
+            bindtap="{{capturedCount >= 6 ? 'goToSolve' : 'takePhoto'}}" 
+            disabled="{{isProcessing || showResultModal}}">
+      <text class="capture-icon">{{capturedCount >= 6 ? '▶' : '📷'}}</text>
+      <text>{{capturedCount >= 6 ? '开始还原' : '拍照'}}</text>
     </button>
     <button class="btn-secondary" bindtap="resetScan">重置</button>
   </view>

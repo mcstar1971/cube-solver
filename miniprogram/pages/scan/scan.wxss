@@ -427,6 +427,11 @@
   color: #666;
 }
 
+.btn-capture.btn-start {
+  background: #4CAF50;
+  color: #fff;
+}
+
 .btn-secondary {
   background: transparent;
   color: #888;
