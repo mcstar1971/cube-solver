@@ -1,12 +1,55 @@
 <!-- pages/solve/solve.wxml -->
 <view class="container">
-  <!-- 魔方展示区域 -->
-  <view class="cube-container">
-    <canvas 
-      type="2d" 
-      id="cubeCanvas" 
-      class="cube-canvas">
-    </canvas>
+  <!-- 魔方展开图 -->
+  <view class="cube-display">
+    <view class="unfold-cube">
+      <!-- 顶面 U -->
+      <view class="cube-row top-offset">
+        <view class="face-grid face-U">
+          <view class="grid-row" wx:for="{{cubeState.U}}" wx:key="index">
+            <view class="grid-cell c-{{item}}" wx:for="{{item}}" wx:key="*this" wx:for-item="color"></view>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 左面L 前面F 右面R 后面B -->
+      <view class="cube-row middle-row">
+        <view class="face-grid face-L">
+          <view class="grid-row" wx:for="{{cubeState.L}}" wx:key="index">
+            <view class="grid-cell c-{{item}}" wx:for="{{item}}" wx:key="*this" wx:for-item="color"></view>
+          </view>
+        </view>
+        <view class="face-grid face-F">
+          <view class="grid-row" wx:for="{{cubeState.F}}" wx:key="index">
+            <view class="grid-cell c-{{item}}" wx:for="{{item}}" wx:key="*this" wx:for-item="color"></view>
+          </view>
+        </view>
+        <view class="face-grid face-R">
+          <view class="grid-row" wx:for="{{cubeState.R}}" wx:key="index">
+            <view class="grid-cell c-{{item}}" wx:for="{{item}}" wx:key="*this" wx:for-item="color"></view>
+          </view>
+        </view>
+        <view class="face-grid face-B">
+          <view class="grid-row" wx:for="{{cubeState.B}}" wx:key="index">
+            <view class="grid-cell c-{{item}}" wx:for="{{item}}" wx:key="*this" wx:for-item="color"></view>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 底面 D -->
+      <view class="cube-row bottom-offset">
+        <view class="face-grid face-D">
+          <view class="grid-row" wx:for="{{cubeState.D}}" wx:key="index">
+            <view class="grid-cell c-{{item}}" wx:for="{{item}}" wx:key="*this" wx:for-item="color"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 面标签 -->
+    <view class="face-labels">
+      <text class="label">U=白 D=黄 F=红 B=橙 L=绿 R=蓝</text>
+    </view>
   </view>
 
   <!-- 当前步骤 -->
@@ -16,10 +59,6 @@
       <text class="move-text">{{currentMove}}</text>
       <text class="move-hint">{{moveHint}}</text>
     </view>
-  </view>
-
-  <!-- 文字提示 -->
-  <view class="text-guide">
     <text class="guide-text">{{guideText}}</text>
   </view>
 
