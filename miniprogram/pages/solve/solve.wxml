@@ -52,14 +52,30 @@
     </view>
   </view>
 
-  <!-- 当前步骤 -->
+  <!-- 步骤区域 -->
   <view class="step-area">
     <text class="step-number">步骤 {{currentStep}} / {{totalSteps}}</text>
     <view class="move-display">
       <text class="move-text">{{currentMove}}</text>
       <text class="move-hint">{{moveHint}}</text>
     </view>
+    
+    <!-- 面和方向说明 -->
+    <view class="direction-guide">
+      <text class="dir-title">{{moveGuide.faceName}}({{moveGuide.faceColor}})</text>
+      <text class="dir-desc">{{moveGuide.directionDesc}}</text>
+      <view class="dir-visual">
+        <text class="dir-arrow">{{moveGuide.arrow}}</text>
+      </view>
+    </view>
+    
     <text class="guide-text">{{guideText}}</text>
+    
+    <!-- 常见问题提示 -->
+    <view class="tips">
+      <text class="tips-title">💡 提示：</text>
+      <text class="tips-text">顺时针/逆时针是从正对该面的角度看</text>
+    </view>
   </view>
 
   <!-- 控制按钮 -->

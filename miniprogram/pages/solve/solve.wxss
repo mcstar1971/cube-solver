@@ -119,6 +119,58 @@
   margin-top: 12rpx;
 }
 
+/* 方向指南 */
+.direction-guide {
+  background: #333;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin: 16rpx 0;
+}
+
+.dir-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+.dir-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #ccc;
+  margin-top: 8rpx;
+}
+
+.dir-visual {
+  margin-top: 12rpx;
+  text-align: center;
+}
+
+.dir-arrow {
+  font-size: 48rpx;
+}
+
+/* 提示 */
+.tips {
+  margin-top: 16rpx;
+  padding: 12rpx 16rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8rpx;
+}
+
+.tips-title {
+  display: block;
+  font-size: 22rpx;
+  color: #888;
+  margin-bottom: 4rpx;
+}
+
+.tips-text {
+  display: block;
+  font-size: 20rpx;
+  color: #666;
+}
+
 /* 控制按钮 */
 .control-area {
   display: flex;
