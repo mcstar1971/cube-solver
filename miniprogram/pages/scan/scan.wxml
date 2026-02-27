@@ -78,10 +78,19 @@
           </view>
         </view>
         
-        <!-- 调试信息 -->
-        <view class="debug-section" wx:if="{{debugInfo}}">
-          <text class="section-label">🔧 调试信息</text>
-          <text class="debug-text">{{debugInfo}}</text>
+        <!-- 调试信息：每个格子的RGB/HSV -->
+        <view class="debug-section">
+          <text class="section-label">🔧 每格详细数据</text>
+          <view class="debug-grid">
+            <view class="debug-row" wx:for="{{cellDebugInfo}}" wx:key="index" wx:for-index="rowIdx">
+              <view class="debug-cell" wx:for="{{item}}" wx:key="*this" wx:for-item="cell">
+                <view class="debug-color c-{{cell.detected}}"></view>
+                <text class="debug-text">R{{cell.rgb[0]}} G{{cell.rgb[1]}} B{{cell.rgb[2]}}</text>
+                <text class="debug-text">H{{cell.hsv.h}} S{{cell.hsv.s}} V{{cell.hsv.v}}</text>
+                <text class="debug-result">→{{colorLabels[cell.detected]}}</text>
+              </view>
+            </view>
+          </view>
         </view>
         
         <!-- 提示 -->

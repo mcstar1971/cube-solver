@@ -3,27 +3,6 @@
  * 使用 HSV 色彩空间提高识别准确率
  */
 
-// 魔方标准颜色定义 (HSV范围)
-// H: 色相 0-360, S: 饱和度 0-100, V: 明度 0-100
-const COLOR_RANGES = [
-  { name: 'U', label: '白色', sMax: 35, vMin: 65 },           // 白色：低饱和度，高明度
-  { name: 'D', label: '黄色', hMin: 35, hMax: 75, sMin: 30 },  // 黄色
-  { name: 'F', label: '红色', hMin: 340, hMax: 20, sMin: 40 }, // 红色（跨0度）
-  { name: 'B', label: '橙色', hMin: 15, hMax: 50, sMin: 40 },  // 橙色
-  { name: 'L', label: '绿色', hMin: 70, hMax: 170, sMin: 30 }, // 绿色
-  { name: 'R', label: '蓝色', hMin: 190, hMax: 270, sMin: 30 } // 蓝色
-]
-
-// RGB参考颜色
-const RGB_COLORS = {
-  U: [255, 255, 255],  // 白
-  D: [255, 255, 0],    // 黄
-  F: [255, 50, 50],    // 红
-  B: [255, 165, 0],    // 橙
-  L: [50, 255, 50],    // 绿
-  R: [50, 50, 255]     // 蓝
-}
-
 /**
  * RGB 转 HSV
  */
@@ -54,76 +33,108 @@ function rgbToHsv(r, g, b) {
 }
 
 /**
- * 识别单个色块颜色（HSV方法）
+ * 识别单个色块颜色
+ * 
+ * 魔方标准颜色（参考）：
+ * - 白色：低饱和度，高明度
+ * - 黄色：色相 50-70，高明度
+ * - 红色：色相 0-20 或 340-360，中等饱和度
+ * - 橙色：色相 15-50
+ * - 绿色：色相 70-170
+ * - 蓝色：色相 190-270
  */
 function detectColor(rgb) {
-  const hsv = rgbToHsv(rgb[0], rgb[1], rgb[2])
+  const [r, g, b] = rgb
+  const hsv = rgbToHsv(r, g, b)
   
-  // 如果明度太低，无法识别
-  if (hsv.v < 25) {
+  const { h, s, v } = hsv
+  
+  // 明度太低，无法识别
+  if (v < 20) {
     return null
   }
   
-  // 白色：低饱和度且高明度（最优先检测）
-  if (hsv.s < 35 && hsv.v > 65) {
+  // ===== 白色检测（最严格）=====
+  // 白色：饱和度极低（<15）且明度高（>70）
+  // 或者：R/G/B都很接近255
+  if ((s < 15 && v > 70) || (r > 220 && g > 220 && b > 220)) {
     return 'U'
   }
   
-  // 黄色：特殊处理，需要在白色之后检测
-  // 黄色饱和度可能较低，但明度很高
-  if (hsv.h >= 35 && hsv.h <= 75 && hsv.v > 50) {
+  // ===== 黄色检测 =====
+  // 黄色：色相 40-75，饱和度 > 30，明度高
+  // 特点：R和G都很高，B较低
+  if (h >= 40 && h <= 75 && s > 25 && v > 50) {
+    return 'D'
+  }
+  // 黄色的另一种情况：R高，G高，B低
+  if (r > 200 && g > 180 && b < 150 && s > 20) {
     return 'D'
   }
   
-  // 红色特殊处理（跨0度：340-360 或 0-20）
-  if ((hsv.h >= 340 || hsv.h <= 20) && hsv.s >= 35 && hsv.v > 30) {
+  // ===== 红色检测 =====
+  // 红色：色相 340-360 或 0-20
+  // 特点：R高，G和B低
+  if ((h >= 340 || h <= 20) && s > 30 && v > 30) {
+    return 'F'
+  }
+  // 红色的RGB特征
+  if (r > 180 && g < 120 && b < 120 && s > 40) {
     return 'F'
   }
   
-  // 橙色
-  if (hsv.h >= 15 && hsv.h <= 50 && hsv.s >= 35 && hsv.v > 40) {
+  // ===== 橙色检测 =====
+  // 橙色：色相 15-50，介于红和黄之间
+  if (h >= 15 && h <= 50 && s > 40 && v > 40) {
+    return 'B'
+  }
+  // 橙色的RGB特征：R高，G中等，B低
+  if (r > 200 && g > 100 && g < 180 && b < 100) {
     return 'B'
   }
   
-  // 绿色
-  if (hsv.h >= 70 && hsv.h <= 170 && hsv.s >= 25 && hsv.v > 30) {
+  // ===== 绿色检测 =====
+  // 绿色：色相 70-170
+  if (h >= 70 && h <= 170 && s > 25 && v > 30) {
+    return 'L'
+  }
+  // 绿色的RGB特征：G最高
+  if (g > r && g > b && g > 100 && s > 20) {
     return 'L'
   }
   
-  // 蓝色
-  if (hsv.h >= 190 && hsv.h <= 270 && hsv.s >= 25 && hsv.v > 30) {
+  // ===== 蓝色检测 =====
+  // 蓝色：色相 190-270
+  if (h >= 190 && h <= 270 && s > 25 && v > 30) {
+    return 'R'
+  }
+  // 蓝色的RGB特征：B最高
+  if (b > r && b > g && b > 80) {
     return 'R'
   }
   
-  // 如果都没匹配，用RGB距离找最接近的
-  return findClosestColor(rgb, hsv)
+  // ===== 兜底方案：找最接近的颜色 =====
+  return findClosestColorByRgb(rgb, hsv)
 }
 
 /**
- * RGB距离匹配（备用方案）
+ * RGB距离匹配（兜底方案）
  */
-function findClosestColor(rgb, hsv) {
-  // 如果HSV可用，优先使用
-  if (hsv) {
-    // 白色
-    if (hsv.s < 40 && hsv.v > 60) return 'U'
-    // 黄色
-    if (hsv.h >= 30 && hsv.h <= 80) return 'D'
-    // 红色
-    if (hsv.h >= 330 || hsv.h <= 30) return 'F'
-    // 橙色
-    if (hsv.h >= 10 && hsv.h <= 55) return 'B'
-    // 绿色
-    if (hsv.h >= 60 && hsv.h <= 180) return 'L'
-    // 蓝色
-    if (hsv.h >= 180 && hsv.h <= 290) return 'R'
+function findClosestColorByRgb(rgb, hsv) {
+  // 标准颜色RGB值
+  const COLORS = {
+    U: [255, 255, 255],  // 白
+    D: [255, 255, 0],    // 黄
+    F: [255, 50, 50],    // 红
+    B: [255, 165, 0],    // 橙
+    L: [50, 205, 50],    // 绿
+    R: [50, 50, 255]     // 蓝
   }
   
-  // RGB距离
   let minDist = Infinity
   let result = 'U'
   
-  for (const [name, color] of Object.entries(RGB_COLORS)) {
+  for (const [name, color] of Object.entries(COLORS)) {
     const dist = Math.sqrt(
       Math.pow(rgb[0] - color[0], 2) +
       Math.pow(rgb[1] - color[1], 2) +
@@ -165,7 +176,7 @@ function validateCubeState(state) {
 }
 
 /**
- * 获取颜色名称（用于显示）
+ * 获取颜色名称
  */
 function getColorLabel(colorCode) {
   const labels = {
@@ -179,7 +190,5 @@ module.exports = {
   detectColor,
   rgbToHsv,
   validateCubeState,
-  getColorLabel,
-  COLOR_RANGES,
-  RGB_COLORS
+  getColorLabel
 }

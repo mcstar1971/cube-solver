@@ -1,4 +1,4 @@
-// pages/scan/scan.js - 拍照模式（调试版）
+// pages/scan/scan.js - 拍照模式（调试版 v2）
 
 const colorDetector = require('../../utils/color-detector')
 
@@ -53,7 +53,10 @@ Page({
     currentPhotoPath: null,
     
     // 调试信息
-    debugInfo: ''
+    debugInfo: '',
+    
+    // 详细调试：每个格子的RGB值
+    cellDebugInfo: []
   },
 
   onLoad() {
@@ -126,100 +129,141 @@ Page({
 
   // 处理照片 - 识别颜色
   processPhoto(photoPath, face) {
-    console.log('处理照片:', photoPath, '面:', face)
+    console.log('=== 开始处理照片 ===')
+    console.log('照片路径:', photoPath)
+    console.log('目标面:', face)
     
     // 获取图片信息
     wx.getImageInfo({
       src: photoPath,
       success: (info) => {
-        console.log('图片信息:', info.width, 'x', info.height)
+        console.log('图片尺寸:', info.width, 'x', info.height)
         
-        // 创建离屏 canvas
-        const canvas = wx.createOffscreenCanvas({
-          type: '2d',
-          width: Math.min(info.width, 600),
-          height: Math.min(info.height, 600)
-        })
-        const ctx = canvas.getContext('2d')
-        
-        // 创建图片对象
-        const img = canvas.createImage()
-        img.onload = () => {
-          // 计算缩放
-          const scale = Math.min(canvas.width / info.width, canvas.height / info.height)
-          const drawWidth = info.width * scale
-          const drawHeight = info.height * scale
-          
-          canvas.width = drawWidth
-          canvas.height = drawHeight
-          
-          // 绘制图片
-          ctx.drawImage(img, 0, 0, drawWidth, drawHeight)
-          
-          // 获取像素数据
-          const imageData = ctx.getImageData(0, 0, drawWidth, drawHeight)
-          
-          // 分析颜色
-          const result = this.analyzeColors(imageData, drawWidth, drawHeight, face)
-          
-          this.showDetectionResult(face, photoPath, result.colors, result.debug)
-        }
-        
-        img.onerror = (err) => {
-          console.error('图片加载失败:', err)
-          // 使用模拟数据
-          this.showDetectionResult(face, photoPath, this.simulateColors(face), '图片加载失败')
-        }
-        
-        img.src = photoPath
+        // 方法1：尝试离屏canvas
+        this.tryOffscreenCanvas(photoPath, info, face)
       },
       fail: (err) => {
         console.error('获取图片信息失败:', err)
-        this.showDetectionResult(face, photoPath, this.simulateColors(face), '获取图片信息失败')
+        this.useSimulatedResult(face, photoPath, '获取图片信息失败')
       }
     })
+  },
+
+  // 尝试离屏canvas
+  tryOffscreenCanvas(photoPath, info, face) {
+    try {
+      const canvas = wx.createOffscreenCanvas({
+        type: '2d',
+        width: 300,
+        height: 300
+      })
+      const ctx = canvas.getContext('2d')
+      
+      const img = canvas.createImage()
+      img.onload = () => {
+        console.log('离屏canvas图片加载成功')
+        
+        // 缩放绘制
+        const scale = Math.min(300 / info.width, 300 / info.height)
+        const w = info.width * scale
+        const h = info.height * scale
+        canvas.width = w
+        canvas.height = h
+        
+        ctx.drawImage(img, 0, 0, w, h)
+        
+        const imageData = ctx.getImageData(0, 0, w, h)
+        console.log('获取到像素数据:', imageData.width, 'x', imageData.height)
+        
+        const result = this.analyzeColors(imageData, w, h, face)
+        this.showDetectionResult(face, photoPath, result.colors, result.debug, result.cellInfo)
+      }
+      
+      img.onerror = (err) => {
+        console.error('离屏canvas图片加载失败:', err)
+        this.useSimulatedResult(face, photoPath, '图片加载失败')
+      }
+      
+      img.src = photoPath
+      
+      // 超时保护
+      setTimeout(() => {
+        if (this.data.isProcessing) {
+          console.log('离屏canvas超时，使用备用方案')
+          this.useSimulatedResult(face, photoPath, '处理超时')
+        }
+      }, 3000)
+      
+    } catch (err) {
+      console.error('离屏canvas创建失败:', err)
+      this.useSimulatedResult(face, photoPath, 'canvas不支持: ' + err.message)
+    }
   },
 
   // 分析图片中的魔方颜色
   analyzeColors(imageData, width, height, expectedFace) {
     const { data } = imageData
     
+    console.log('=== 分析颜色 ===')
+    console.log('图像尺寸:', width, 'x', height)
+    
     // 中心点
     const centerX = Math.floor(width / 2)
     const centerY = Math.floor(height / 2)
     
-    // 扫描区域大小（假设魔方占画面中心70%）
-    const scanSize = Math.min(width, height) * 0.5
+    // 扫描区域大小
+    const scanSize = Math.min(width, height) * 0.6
     const cellSize = scanSize / 3
     
     const colors = []
+    const cellInfo = []
     const debugRows = []
+    
+    console.log('扫描区域:', scanSize, '格子大小:', cellSize)
+    console.log('中心点:', centerX, centerY)
     
     // 取9个格子的颜色
     for (let row = 0; row < 3; row++) {
       colors[row] = []
+      cellInfo[row] = []
       debugRows[row] = []
       
       for (let col = 0; col < 3; col++) {
+        // 计算采样中心点
         const sampleX = Math.floor(centerX - scanSize / 2 + col * cellSize + cellSize / 2)
         const sampleY = Math.floor(centerY - scanSize / 2 + row * cellSize + cellSize / 2)
         
+        // 采样半径
+        const radius = Math.max(5, Math.floor(cellSize / 4))
+        
         // 获取平均颜色
-        const avgColor = this.getAverageColor(data, width, height, sampleX, sampleY, Math.floor(cellSize / 4))
+        const avgColor = this.getAverageColor(data, width, height, sampleX, sampleY, radius)
         const [r, g, b] = avgColor
+        
+        // RGB转HSV
+        const hsv = colorDetector.rgbToHsv(r, g, b)
         
         // 识别颜色
         const detected = colorDetector.detectColor(avgColor)
         colors[row][col] = detected || expectedFace
         
-        // 调试信息
-        debugRows[row][col] = `RGB(${r},${g},${b})→${detected || '?'}`
+        // 保存详细信息
+        cellInfo[row][col] = {
+          pos: { x: sampleX, y: sampleY },
+          rgb: avgColor,
+          hsv: hsv,
+          detected: detected || expectedFace
+        }
+        
+        debugRows[row][col] = `(${r},${g},${b}) H${Math.round(hsv.h)}→${detected}`
+        
+        console.log(`格子[${row}][${col}] 位置(${sampleX},${sampleY}) RGB(${r},${g},${b}) HSV(${Math.round(hsv.h)},${Math.round(hsv.s)},${Math.round(hsv.v)}) → ${detected}`)
       }
     }
     
     const debug = debugRows.map(row => row.join(' | ')).join('\n')
     
-    return { colors, debug }
+    return { colors, debug, cellInfo }
   },
 
   // 获取区域平均颜色
@@ -233,29 +277,49 @@ Page({
         
         if (x >= 0 && x < width && y >= 0 && y < height) {
           const idx = (y * width + x) * 4
-          r += data[idx] || 0
-          g += data[idx + 1] || 0
-          b += data[idx + 2] || 0
-          count++
+          if (idx >= 0 && idx + 2 < data.length) {
+            r += data[idx] || 0
+            g += data[idx + 1] || 0
+            b += data[idx + 2] || 0
+            count++
+          }
         }
       }
     }
     
-    if (count === 0) return [128, 128, 128]
+    if (count === 0) {
+      console.warn('采样区域无效:', centerX, centerY, radius)
+      return [128, 128, 128]
+    }
+    
     return [Math.round(r / count), Math.round(g / count), Math.round(b / count)]
   },
 
-  // 模拟颜色（备用）
-  simulateColors(face) {
-    return [
+  // 使用模拟结果（备用）
+  useSimulatedResult(face, photoPath, reason) {
+    console.log('使用模拟结果:', reason)
+    
+    // 生成模拟数据（调试用：假设该面全是同一颜色）
+    const colors = [
       [face, face, face],
       [face, face, face],
       [face, face, face]
     ]
+    
+    const cellInfo = colors.map((row, ri) => 
+      row.map((_, ci) => ({
+        pos: { x: 0, y: 0 },
+        rgb: [0, 0, 0],
+        hsv: { h: 0, s: 0, v: 0 },
+        detected: face
+      }))
+    )
+    
+    this.showDetectionResult(face, photoPath, colors, `备用方案: ${reason}`, cellInfo)
   },
 
   // 显示识别结果
-  showDetectionResult(face, photoPath, colors, debug = '') {
+  showDetectionResult(face, photoPath, colors, debug = '', cellInfo = []) {
     this.setData({
       showResultModal: true,
       isProcessing: false,
@@ -263,6 +327,7 @@ Page({
       currentPhotoFace: face,
       currentPhotoPath: photoPath,
       debugInfo: debug,
+      cellDebugInfo: cellInfo,
       statusText: '请确认识别结果'
     })
   },
@@ -293,6 +358,7 @@ Page({
       currentPhotoFace: null,
       currentPhotoPath: null,
       debugInfo: '',
+      cellDebugInfo: [],
       statusText: newCount >= 6 ? '扫描完成！' : '继续拍摄下一面',
       hintText: newCount >= 6 ? '点击"开始还原"继续' : this.getNextHint()
     })
@@ -312,6 +378,7 @@ Page({
       currentPhotoFace: null,
       currentPhotoPath: null,
       debugInfo: '',
+      cellDebugInfo: [],
       statusText: '请重新拍摄'
     })
   },
@@ -333,7 +400,7 @@ Page({
     return `请拍摄${this.data.faceNames[nextFace]}`
   },
 
-  // 点击已拍摄的面（重新拍摄）
+  // 点击已拍摄的面
   onFaceTap(e) {
     const face = e.currentTarget.dataset.face
     if (!this.data.captured[face]) return
@@ -342,7 +409,6 @@ Page({
       itemList: ['重新拍摄', '查看照片', '查看识别结果'],
       success: (res) => {
         if (res.tapIndex === 0) {
-          // 重新拍摄
           const captured = { ...this.data.captured }
           const cubeColors = { ...this.data.cubeColors }
           delete captured[face]
@@ -357,7 +423,6 @@ Page({
             hintText: this.data.faceNames[face]
           })
         } else if (res.tapIndex === 1) {
-          // 查看照片
           const photoPath = this.data.facePhotos[face]
           if (photoPath) {
             wx.previewImage({
@@ -366,7 +431,6 @@ Page({
             })
           }
         } else if (res.tapIndex === 2) {
-          // 查看识别结果
           const colors = this.data.cubeColors[face]
           if (colors) {
             const colorStr = colors.map(row => row.join(' ')).join('\n')
@@ -388,7 +452,6 @@ Page({
       content: '将清除所有已拍摄的照片，确定吗？',
       success: (res) => {
         if (res.confirm) {
-          // 清理图片
           for (const path of Object.values(this.data.facePhotos)) {
             if (path.startsWith(wx.env.USER_DATA_PATH)) {
               wx.removeSavedFile({ filePath: path }).catch(() => {})
@@ -409,7 +472,8 @@ Page({
             detectedColors: null,
             currentPhotoFace: null,
             currentPhotoPath: null,
-            debugInfo: ''
+            debugInfo: '',
+            cellDebugInfo: []
           })
         }
       }
@@ -418,7 +482,6 @@ Page({
 
   // 开始求解
   goToSolve() {
-    // 验证状态
     const state = this.data.cubeColors
     const faces = this.data.faceOrder
     
@@ -433,14 +496,12 @@ Page({
       }
     }
     
-    // 保存到全局
     const app = getApp()
     app.globalData.cubeState = state
     
     wx.navigateTo({ url: '/pages/solve/solve' })
   },
 
-  // 摄像头错误
   onCameraError(e) {
     console.error('摄像头错误:', e.detail)
     wx.showToast({ title: '摄像头错误', icon: 'none' })
