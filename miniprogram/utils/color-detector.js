@@ -54,10 +54,13 @@ function detectColor(rgb) {
     return null
   }
   
-  // ===== 白色检测（最严格）=====
-  // 白色：饱和度极低（<15）且明度高（>70）
-  // 或者：R/G/B都很接近255
-  if ((s < 15 && v > 70) || (r > 220 && g > 220 && b > 220)) {
+  // ===== 白色检测（优先，条件放宽）=====
+  // 条件1：饱和度极低（<25）且明度高（>65）
+  // 条件2：RGB都很高且接近（差异<40）
+  const isLowSat = s < 25 && v > 65
+  const isHighRgb = r > 180 && g > 180 && b > 180 && 
+                    Math.abs(r - g) < 40 && Math.abs(g - b) < 40 && Math.abs(r - b) < 40
+  if (isLowSat || isHighRgb) {
     return 'U'
   }
   
