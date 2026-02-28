@@ -1,54 +1,36 @@
 /**
- * solver.js - 魔方求解算法
+ * solver.js - 魔方求解算法（实用版）
  * 
- * 使用IDA*搜索算法
- * 适用于小程序环境，无需预计算表
+ * 策略：直接用IDA*配合强启发式
+ * 不搞复杂的分阶段，专注把启发式做好
  */
 
-// 移动定义
 const MOVES = ['U', "U'", 'U2', 'D', "D'", 'D2', 'R', "R'", 'R2', 'L', "L'", 'L2', 'F', "F'", 'F2', 'B', "B'", 'B2']
 
 // 角块转动表
 const CORNER_PERM_TABLE = [
-  [1, 0, 4, 5], // U: URF->UFL->DLF->DFR
-  [0, 3, 7, 4], // R: URF->UBR->DRB->DFR
-  [0, 1, 2, 3], // F: URF->UFL->ULB->UBR
-  [5, 4, 7, 6], // D: DLF->DFR->DRB->DBL
-  [2, 1, 5, 6], // L: ULB->UFL->DLF->DBL
-  [3, 2, 6, 7]  // B: UBR->ULB->DBL->DRB
+  [1, 0, 4, 5], [0, 3, 7, 4], [0, 1, 2, 3],
+  [5, 4, 7, 6], [2, 1, 5, 6], [3, 2, 6, 7]
 ]
 
 const CORNER_ORI_TABLE = [
-  [0, 0, 0, 0], // U
-  [2, 1, 2, 1], // R
-  [1, 2, 1, 2], // F
-  [0, 0, 0, 0], // D
-  [1, 2, 1, 2], // L
-  [1, 2, 1, 2]  // B
+  [0, 0, 0, 0], [2, 1, 2, 1], [1, 2, 1, 2],
+  [0, 0, 0, 0], [1, 2, 1, 2], [1, 2, 1, 2]
 ]
 
-// 棱块转动表
 const EDGE_PERM_TABLE = [
-  [0, 1, 2, 3],   // U: UR->UF->UL->UB
-  [0, 8, 4, 11],  // R: UR->FR->DR->BR
-  [1, 9, 5, 8],   // F: UF->FL->DF->FR
-  [5, 4, 7, 6],   // D: DF->DR->DB->DL
-  [2, 10, 6, 9],  // L: UL->BL->DL->FL
-  [3, 11, 7, 10]  // B: UB->BR->DB->BL
+  [0, 1, 2, 3], [0, 8, 4, 11], [1, 9, 5, 8],
+  [5, 4, 7, 6], [2, 10, 6, 9], [3, 11, 7, 10]
 ]
 
 const EDGE_ORI_TABLE = [
-  [0, 0, 0, 0],   // U
-  [0, 0, 0, 0],   // R
-  [1, 1, 1, 1],   // F
-  [0, 0, 0, 0],   // D
-  [1, 1, 1, 1],   // L
-  [1, 1, 1, 1]    // B
+  [0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1],
+  [0, 0, 0, 0], [1, 1, 1, 1], [1, 1, 1, 1]
 ]
 
-/**
- * 魔方状态类
- */
+// 相对面映射
+const OPPOSITE_FACE = { 0: 1, 1: 0, 2: 3, 3: 2, 4: 5, 5: 4 }
+
 class CubeState {
   constructor(cp, co, ep, eo) {
     this.cp = cp || [0, 1, 2, 3, 4, 5, 6, 7]
@@ -58,12 +40,7 @@ class CubeState {
   }
   
   clone() {
-    return new CubeState(
-      this.cp.slice(),
-      this.co.slice(),
-      this.ep.slice(),
-      this.eo.slice()
-    )
+    return new CubeState(this.cp.slice(), this.co.slice(), this.ep.slice(), this.eo.slice())
   }
   
   isSolved() {
@@ -79,29 +56,24 @@ class CubeState {
   applyMove(moveStr) {
     const face = 'UDRLFB'.indexOf(moveStr[0])
     const times = moveStr.includes('2') ? 2 : (moveStr.includes("'") ? 3 : 1)
-    
     for (let t = 0; t < times; t++) {
       this.applySingleMove(face)
     }
-    
     return this
   }
   
   applySingleMove(face) {
-    // 应用角块变换
+    // 角块
     const cpCycle = CORNER_PERM_TABLE[face]
     const coDelta = CORNER_ORI_TABLE[face]
-    
     const newCp = this.cp.slice()
     const newCo = this.co.slice()
     
-    // 循环排列
     newCp[cpCycle[0]] = this.cp[cpCycle[3]]
     newCp[cpCycle[1]] = this.cp[cpCycle[0]]
     newCp[cpCycle[2]] = this.cp[cpCycle[1]]
     newCp[cpCycle[3]] = this.cp[cpCycle[2]]
     
-    // 方向变化
     newCo[cpCycle[0]] = (this.co[cpCycle[3]] + coDelta[3]) % 3
     newCo[cpCycle[1]] = (this.co[cpCycle[0]] + coDelta[0]) % 3
     newCo[cpCycle[2]] = (this.co[cpCycle[1]] + coDelta[1]) % 3
@@ -110,20 +82,17 @@ class CubeState {
     this.cp = newCp
     this.co = newCo
     
-    // 应用棱块变换
+    // 棱块
     const epCycle = EDGE_PERM_TABLE[face]
     const eoDelta = EDGE_ORI_TABLE[face]
-    
     const newEp = this.ep.slice()
     const newEo = this.eo.slice()
     
-    // 循环排列
     newEp[epCycle[0]] = this.ep[epCycle[3]]
     newEp[epCycle[1]] = this.ep[epCycle[0]]
     newEp[epCycle[2]] = this.ep[epCycle[1]]
     newEp[epCycle[3]] = this.ep[epCycle[2]]
     
-    // 方向变化
     newEo[epCycle[0]] = (this.eo[epCycle[3]] + eoDelta[3]) % 2
     newEo[epCycle[1]] = (this.eo[epCycle[0]] + eoDelta[0]) % 2
     newEo[epCycle[2]] = (this.eo[epCycle[1]] + eoDelta[1]) % 2
@@ -131,34 +100,60 @@ class CubeState {
     
     this.ep = newEp
     this.eo = newEo
-    
     return this
   }
   
-  // 启发式估计
+  /**
+   * 强启发式：组合多个下界估计
+   */
   heuristic() {
-    // 计算角块和棱块的曼哈顿距离估计
-    let h = 0
-    
-    // 角块
+    // 1. 角块排列的循环计数
+    let cpCycles = 0
+    const cpVisited = [false, false, false, false, false, false, false, false]
     for (let i = 0; i < 8; i++) {
-      if (this.cp[i] !== i) h++
-      if (this.co[i] !== 0) h++
+      if (!cpVisited[i]) {
+        let j = i, len = 0
+        while (!cpVisited[j]) {
+          cpVisited[j] = true
+          j = this.cp[j]
+          len++
+        }
+        if (len > 1) cpCycles += len - 1
+      }
     }
     
-    // 棱块
+    // 2. 棱块排列的循环计数
+    let epCycles = 0
+    const epVisited = [false, false, false, false, false, false, false, false, false, false, false, false]
     for (let i = 0; i < 12; i++) {
-      if (this.ep[i] !== i) h++
-      if (this.eo[i] !== 0) h++
+      if (!epVisited[i]) {
+        let j = i, len = 0
+        while (!epVisited[j]) {
+          epVisited[j] = true
+          j = this.ep[j]
+          len++
+        }
+        if (len > 1) epCycles += len - 1
+      }
     }
     
-    // 每步最多影响约8个块，所以除以8
-    return Math.ceil(h / 8)
+    // 3. 方向错误计数
+    let coWrong = 0, eoWrong = 0
+    for (let i = 0; i < 8; i++) if (this.co[i] !== 0) coWrong++
+    for (let i = 0; i < 12; i++) if (this.eo[i] !== 0) eoWrong++
+    
+    // 一次转动最多影响：4个角块位置，4个棱块位置，4个角块方向，4个棱块方向
+    // 所以下界是各维度独立估计的最大值
+    const h1 = Math.ceil(cpCycles / 4)
+    const h2 = Math.ceil(epCycles / 4)
+    const h3 = Math.ceil(coWrong / 4)
+    const h4 = Math.ceil(eoWrong / 4)
+    
+    return Math.max(h1, h2, h3, h4)
   }
   
-  // 序列化（用于去重）
   toString() {
-    return this.cp.join(',') + '|' + this.co.join(',') + '|' + this.ep.join(',') + '|' + this.eo.join(',')
+    return `${this.cp.join('')}.${this.co.join('')}.${this.ep.join('')}.${this.eo.join('')}`
   }
 }
 
@@ -166,72 +161,55 @@ class CubeState {
  * IDA* 求解器
  */
 class IDASolver {
-  constructor(maxDepth = 22) {
+  constructor(maxDepth = 20, maxNodes = 1000000) {
     this.maxDepth = maxDepth
-    this.solution = null
+    this.maxNodes = maxNodes
     this.nodeCount = 0
   }
   
   solve(state) {
     if (state.isSolved()) return []
     
-    this.solution = null
-    this.nodeCount = 0
+    const h0 = state.heuristic()
     
-    // 迭代加深
-    for (let depth = 0; depth <= this.maxDepth; depth++) {
+    for (let depth = h0; depth <= this.maxDepth; depth++) {
       this.nodeCount = 0
       const path = []
       
       if (this.search(state, depth, -1, path)) {
-        return this.solution
+        return path
       }
       
-      // 如果搜索节点过多，可能无解
-      if (this.nodeCount > 1000000) {
-        console.warn('搜索节点过多')
-        break
+      if (this.nodeCount > this.maxNodes) {
+        console.log(`IDA* 深度${depth}节点超限:`, this.nodeCount)
+        return null
       }
     }
-    
     return null
   }
   
   search(state, depth, lastFace, path) {
     this.nodeCount++
     
-    if (state.isSolved()) {
-      this.solution = path.slice()
-      return true
-    }
-    
+    if (state.isSolved()) return true
     if (depth <= 0) return false
     
-    // 启发式剪枝
     const h = state.heuristic()
     if (h > depth) return false
     
-    // 尝试所有可能的移动
     for (const move of MOVES) {
-      // 剪枝：避免连续同面或相对面
       const face = 'UDRLFB'.indexOf(move[0])
+      
+      // 剪枝：避免连续同面或相对面
       if (lastFace >= 0) {
-        // 同一面
         if (face === lastFace) continue
-        // 相对面 (U-D, R-L, F-B)
-        if ((face === 0 && lastFace === 1) || (face === 1 && lastFace === 0)) continue
-        if ((face === 2 && lastFace === 3) || (face === 3 && lastFace === 2)) continue
-        if ((face === 4 && lastFace === 5) || (face === 5 && lastFace === 4)) continue
+        if (OPPOSITE_FACE[face] === lastFace) continue
       }
       
-      // 应用移动
-      const newState = state.clone().applyMove(move)
       path.push(move)
-      
-      if (this.search(newState, depth - 1, face, path)) {
+      if (this.search(state.clone().applyMove(move), depth - 1, face, path)) {
         return true
       }
-      
       path.pop()
     }
     
@@ -240,117 +218,117 @@ class IDASolver {
 }
 
 /**
- * 双向BFS求解器
- * 更快但内存消耗更大
+ * 双向BFS求解器（限制深度）
  */
 class BidirectionalBFSSolver {
-  constructor(maxDepth = 14) {
+  constructor(maxDepth = 12) {
     this.maxDepth = maxDepth
   }
   
   solve(state) {
     if (state.isSolved()) return []
     
-    const startState = state.toString()
-    const goalState = new CubeState().toString()
+    const forward = new Map()
+    const backward = new Map()
+    forward.set(state.toString(), [])
+    backward.set(new CubeState().toString(), [])
     
-    // 从起点和终点同时搜索
-    const forward = { [startState]: [] }
-    const backward = { [goalState]: [] }
+    let fQueue = [{ s: state.clone(), p: [] }]
+    let bQueue = [{ s: new CubeState(), p: [] }]
+    const halfDepth = Math.floor(this.maxDepth / 2)
     
-    const forwardQueue = [{ state: state.clone(), path: [] }]
-    const backwardQueue = [{ state: new CubeState(), path: [] }]
-    
-    for (let depth = 0; depth <= this.maxDepth; depth++) {
-      // 扩展正向
-      const newForwardQueue = []
-      for (const { state: s, path } of forwardQueue) {
-        const key = s.toString()
-        
-        // 检查是否与反向相遇
-        if (backward[key]) {
-          return path.concat(this.inversePath(backward[key]))
-        }
-        
-        if (path.length >= Math.ceil(this.maxDepth / 2)) continue
-        
-        // 扩展
-        for (const move of MOVES) {
-          if (path.length > 0 && move[0] === path[path.length - 1][0]) continue
-          
-          const newState = s.clone().applyMove(move)
-          const newKey = newState.toString()
-          
-          if (!forward[newKey]) {
-            forward[newKey] = [...path, move]
-            newForwardQueue.push({ state: newState, path: forward[newKey] })
-          }
+    for (let d = 0; d <= this.maxDepth; d++) {
+      // 检查相遇
+      for (const { s, p } of fQueue) {
+        const k = s.toString()
+        if (backward.has(k)) {
+          return p.concat(this.inverse(backward.get(k)))
         }
       }
-      forwardQueue.length = 0
-      forwardQueue.push(...newForwardQueue)
       
-      // 扩展反向
-      const newBackwardQueue = []
-      for (const { state: s, path } of backwardQueue) {
-        const key = s.toString()
-        
-        // 检查是否与正向相遇
-        if (forward[key]) {
-          return forward[key].concat(this.inversePath(path))
-        }
-        
-        if (path.length >= Math.ceil(this.maxDepth / 2)) continue
-        
-        // 扩展
-        for (const move of MOVES) {
-          if (path.length > 0 && move[0] === path[path.length - 1][0]) continue
-          
-          const newState = s.clone().applyMove(move)
-          const newKey = newState.toString()
-          
-          if (!backward[newKey]) {
-            backward[newKey] = [...path, move]
-            newBackwardQueue.push({ state: newState, path: backward[newKey] })
-          }
-        }
+      // 限制深度
+      if (fQueue.length > 0 && fQueue[0].p.length >= halfDepth) {
+        // 只扩展反向
+        bQueue = this.expand(bQueue, backward, forward, halfDepth)
+      } else if (bQueue.length > 0 && bQueue[0].p.length >= halfDepth) {
+        // 只扩展正向
+        fQueue = this.expand(fQueue, forward, backward, halfDepth)
+      } else {
+        // 双向扩展
+        fQueue = this.expand(fQueue, forward, backward, halfDepth)
+        bQueue = this.expand(bQueue, backward, forward, halfDepth)
       }
-      backwardQueue.length = 0
-      backwardQueue.push(...newBackwardQueue)
+      
+      if (fQueue.length === 0 && bQueue.length === 0) break
     }
     
     return null
   }
   
-  inversePath(path) {
-    return path.map(m => {
-      if (m.includes('2')) return m
-      if (m.includes("'")) return m[0]
-      return m + "'"
-    }).reverse()
+  expand(queue, visited, other, maxLen) {
+    const newQueue = []
+    for (const { s, p } of queue) {
+      if (p.length >= maxLen) continue
+      
+      for (const move of MOVES) {
+        if (p.length > 0 && move[0] === p[p.length - 1][0]) continue
+        
+        const ns = s.clone().applyMove(move)
+        const k = ns.toString()
+        
+        if (!visited.has(k)) {
+          const np = [...p, move]
+          visited.set(k, np)
+          newQueue.push({ s: ns, p: np })
+        }
+      }
+    }
+    return newQueue
+  }
+  
+  inverse(path) {
+    return path.map(m => m.includes('2') ? m : (m.includes("'") ? m[0] : m + "'")).reverse()
   }
 }
 
 /**
- * 主求解接口
+ * 组合求解器：先BFS，再IDA*
  */
-function solveCube(cp, co, ep, eo, method = 'ida') {
-  const state = new CubeState(cp, co, ep, eo)
-  
-  if (method === 'bfs') {
-    const solver = new BidirectionalBFSSolver(14)
-    return solver.solve(state)
-  } else {
-    const solver = new IDASolver(22)
-    return solver.solve(state)
+class CombinedSolver {
+  solve(state) {
+    if (state.isSolved()) return []
+    
+    // 先试BFS（快但内存大）
+    const bfs = new BidirectionalBFSSolver(12)
+    let solution = bfs.solve(state)
+    if (solution) {
+      console.log('BFS求解:', solution.length, '步')
+      return solution
+    }
+    
+    // BFS失败，用IDA*
+    console.log('切换IDA*...')
+    const ida = new IDASolver(20, 500000)
+    solution = ida.solve(state)
+    if (solution) {
+      console.log('IDA*求解:', solution.length, '步, 节点:', ida.nodeCount)
+    }
+    return solution
   }
 }
 
-// 导出
+function solveCube(cp, co, ep, eo, method = 'combined') {
+  const state = new CubeState(cp, co, ep, eo)
+  if (method === 'bfs') return new BidirectionalBFSSolver(12).solve(state)
+  if (method === 'ida') return new IDASolver(20).solve(state)
+  return new CombinedSolver().solve(state)
+}
+
 module.exports = {
   CubeState,
   IDASolver,
   BidirectionalBFSSolver,
+  CombinedSolver,
   solveCube,
   MOVES
 }
